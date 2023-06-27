@@ -1,0 +1,53 @@
+{
+  "name": "emulatorjs-netplay-server",
+  "productName": "EmulatorJS Netplay Server",
+  "version": "0.3.0",
+  "main": "app.js",
+  "description": "A Netplay Server For EmulatorJS",
+  "author": {
+    "name": "EmulatorJS",
+    "url": "https://github.com/EmulatorJS"
+  },
+  "pkg": {
+    "scripts": "**/*.js",
+    "assets": "**/*",
+    "targets": [ "latest-linux-x64", "latest-win-x64", "latest-linux-armv6", "latest-linux-armv7", "latest-linux-arm64", "latest-win-arm64"],
+    "outputPath": "dist"
+  },
+  "build": {
+    "appId": "org.emulatorjs.netplay.server",
+    "linux": {
+      "target": [
+        "appimage",
+        "zip"
+      ],
+      "description": "A Netplay Server For EmulatorJS",
+      "category": "Network;Game",
+      "icon" : "src/img/icon.png"
+
+    },
+    "win": {
+      "target": [
+        "zip",
+        "portable"
+      ],
+      "icon" : "src/img/icon.ico"
+    }
+  },
+  "scripts": {
+    "start": "node index.js",
+    "app": "electron .",
+    "build-windows": "electron-builder --win",
+    "build-linux": "electron-builder --linux"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "killable": "^1.0.1",
+    "socket.io": "^4.7.0"
+  },
+  "devDependencies": {
+    "electron": "^25.2.0",
+    "electron-builder": "^24.4.0",
+    "pkg": "^5.8.1"
+  }
+}
