@@ -1,6 +1,8 @@
 const electron = require('electron');
 const path = require('path');
 const { app, BrowserWindow } = electron;
+const cp = require('child_process');
+var server;
 
 function createWindow() {
     const win = new BrowserWindow({
@@ -19,21 +21,38 @@ function createWindow() {
       icon: path.join(__dirname, 'src/img/icon.png')
     });
     win.removeMenu();
-    win.loadFile(path.join(__dirname, 'src', 'index.html'));
     win.setTitle("EmulatorJS Netplay Server");
+    win.loadFile(path.join(__dirname, 'src/loading.html'));
+}
+
+function startserver() {
+  server = cp.fork(path.join(__dirname, 'server.js'));
+  server.on('message', function(m) {
+    console.log(m);
+  });
+  server.send({ function: 'start' });
+}
+
+function killserver() {
+  server.send({ function: 'kill' });
+  if (process.platform !== 'darwin') {
+    app.quit();
   }
+}
 app.whenReady().then(() => {
   createWindow()
-
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow()
+      createWindow();
     }
-  })
-})
+  });
+  startserver();
+});
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
-})
+  killserver();
+});
+['SIGINT', 'SIGTERM', 'SIGQUIT'].forEach(signal => process.on(signal, () => {
+  killserver();
+  process.exit();
+}));
