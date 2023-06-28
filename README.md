@@ -8,7 +8,7 @@ Working netplay server for https://github.com/emulatorjs/emulatorjs
 
 Go to the releases tab and download the latest release for windows:
 
-https://github.com/EmulatorJS/EmulatorJS-netplay/releases/tag/latest
+https://github.com/EmulatorJS/EmulatorJS-Netplay/releases/tag/latest
 
 Then run the exe file.
 
