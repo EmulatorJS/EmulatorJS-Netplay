@@ -36,7 +36,8 @@
     }
   },
   "scripts": {
-    "start": "node index.js",
+    "start": "node server.js",
+    "dev": "node server.js -d",
     "app": "electron .",
     "build-win": "electron-builder --win && pkg ./ --targets latest-win-x64",
     "build-linux": "electron-builder --linux && pkg ./ --targets latest-linux-x64",

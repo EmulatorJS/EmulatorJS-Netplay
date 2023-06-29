@@ -87,10 +87,19 @@ You can also use the flags `-p` for port and `-a` for password:
 ```
 npm start -- -p 8080 -a admin
 ```
+You can add the flag `-d` to run the server in dev mode.
+```
+npm start -- -p 3000 -a admindev -d
+```
+You can also run the dev version with:
+```
+npm run dev
+```
 You can run the GUI version with:
 ```
 npm run app
 ```
+You can run the help with the flag `-h`
 
 ## Configurating the server
 
