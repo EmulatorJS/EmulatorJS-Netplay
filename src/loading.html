@@ -38,36 +38,27 @@
         filter: drop-shadow(0 0 10px white);
       }
     }
-
+    
     .loading-text {
       font-size: 24px;
-      filter: drop-shadow(0 0 10px white);
-      animation: loading-dots 1s infinite;
+      filter: drop-shadow(0 0 10px white); 
     }
-
-    @keyframes loading-dots {
-      0% {
-        content: "Starting Server.";
-      }
-      25% {
-        content: "Starting Server..";
-      }
-      50% {
-        content: "Starting Server...";
-      }
-      75% {
-        content: "Starting Server..";
-      }
-      100% {
-        content: "Starting Server.";
-      }
-}
   </style>
 </head>
 <body>
   <div class="loading-screen">
     <img src="./img/logo-light.png" alt="Logo" class="logo">
-    <p class="loading-text">Starting Server...</p>
+    <p class="loading-text">Starting Server<span id="dots"></span></p>
   </div>
+  <script>
+    const dotsElement = document.getElementById("dots");
+
+    function animateDots() {
+      setInterval(() => {
+        dotsElement.innerHTML = dotsElement.innerHTML.length < 3 ? dotsElement.innerHTML + "." : "";
+      }, 500);
+    }
+    animateDots();
+  </script>
 </body>
 </html>
