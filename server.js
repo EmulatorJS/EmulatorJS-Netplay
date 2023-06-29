@@ -1,6 +1,6 @@
 const http = require('http');
 const express = require('express');
-const server = require('socket.io');
+const Server = require('socket.io');
 const path = require('path');
 const app = express();
 let nofusers = 0;
@@ -8,13 +8,16 @@ let port;
 let password;
 let dev;
 let appserver;
-let window;
 let server;
 
+function checkAuth(authorization, passwordforserver) {
+    if (!authorization) return false;
+    const [username, password] = Buffer.from(authorization.replace('Basic ', ''), 'base64').toString().split(':')
+    return username === 'admin' && password === passwordforserver;
+}
+
 function startserver() {
-    consolelog("Starting server on port " + port + " with password " + password);
     server = http.createServer(app);
-    app.use(express.urlencoded());
     app.use(express.json());
     app.get('/', (req, res) => {
         const reject = () => {
@@ -24,10 +27,21 @@ function startserver() {
         if (!checkAuth(req.headers.authorization, password)) {
             return reject();
         }
-        res.sendFile(path.join(__dirname + 'src' +'index.html'));
+        res.sendFile(path.join(__dirname + '/src/' +'index.html'));
         if(appserver){
             process.send({ function: 'url', url: 'http://localhost:' + port});
         }
+    });
+    app.get('/img/:imageName', function(req, res) {
+        const image = req.params['imageName'];
+        try {
+            res.sendFile(path.join(__dirname + 'src/img' + image));
+        } catch (err) {
+            res.sendStatus(401)
+        }
+    });
+    server.listen(port || 3000, '0.0.0.0', () => {
+        consolelog("Starting server on port " + (port || 3000) + " with password " + password);
     });
 }
 
