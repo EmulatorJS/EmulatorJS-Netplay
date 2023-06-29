@@ -3,9 +3,9 @@ const path = require('path');
 const { app, BrowserWindow } = electron;
 const cp = require('child_process');
 const config = require('./config.json');
-var port = config.port;
-var password = config.password;
-var server;
+let port = config.port;
+let password = config.password;
+let server;
 
 function createWindow() {
     const win = new BrowserWindow({
@@ -29,7 +29,9 @@ function createWindow() {
 }
 
 function startserver(p, a) {
-  server = cp.fork(path.join(__dirname, 'server.js'));
+  let opts = Object.create(process.env);
+  opts.execArgv = ['--harmony'];
+  server = cp.fork(path.join(__dirname, 'server.js'), opts);
   //server.on('message', function(m) {
   //  console.log(m);
   //});
