@@ -7,9 +7,10 @@ let port = config.port;
 let password = config.password;
 let dev = config.dev;
 let server;
+let win;
 
 function createWindow() {
-    const win = new BrowserWindow({
+    win = new BrowserWindow({
       title: "EmulatorJS Netplay Server",
       width: 800,
       height: 600,
@@ -53,6 +54,8 @@ app.whenReady().then(() => {
 process.on('message', function(m) {
   if(m.function == 'kill'){
       process.exit();
+  }else if(m.function == 'url'){
+      win.loadURL(m.url);
   }
 });
 
