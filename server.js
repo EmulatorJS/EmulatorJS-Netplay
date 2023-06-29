@@ -4,8 +4,6 @@ const path = require('path');
 const server = require('socket.io');
 const config = require('./config.json');
 
-
-
 process.on('message', function(m) {
     console.log(m);
 });

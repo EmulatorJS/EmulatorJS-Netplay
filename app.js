@@ -2,6 +2,9 @@ const electron = require('electron');
 const path = require('path');
 const { app, BrowserWindow } = electron;
 const cp = require('child_process');
+const config = require('./config.json');
+var port = config.port;
+var password = config.password;
 var server;
 
 function createWindow() {
@@ -25,12 +28,12 @@ function createWindow() {
     win.loadFile(path.join(__dirname, 'src/loading.html'));
 }
 
-function startserver() {
+function startserver(p, a) {
   server = cp.fork(path.join(__dirname, 'server.js'));
-  server.on('message', function(m) {
-    console.log(m);
-  });
-  server.send({ function: 'start' });
+  //server.on('message', function(m) {
+  //  console.log(m);
+  //});
+  server.send({ function: 'start', port: p, password: a});
 }
 
 function killserver() {
@@ -39,6 +42,7 @@ function killserver() {
     app.quit();
   }
 }
+
 app.whenReady().then(() => {
   createWindow()
   app.on('activate', () => {
@@ -46,12 +50,13 @@ app.whenReady().then(() => {
       createWindow();
     }
   });
-  startserver();
+  startserver(port, password);
 });
 
 app.on('window-all-closed', () => {
   killserver();
 });
+
 ['SIGINT', 'SIGTERM', 'SIGQUIT'].forEach(signal => process.on(signal, () => {
   killserver();
   process.exit();

@@ -1,4 +1,4 @@
-# EmulatorJS-Netplay Server
+# EmulatorJS Netplay Server
 
 Working netplay server for https://github.com/EmulatorJS/emulatorJS
 
@@ -16,15 +16,15 @@ Development instructions are located [here](#development)
 
 Configurating the server is located [here](#configurating-the-server)
 
+Building instructions are located [here](#building)
+
 License is located [here](#license)
 
 ## To use:
 
 ### Windows:
 
-Go to the releases tab and download the latest release for windows and open the exe file:
-
-* https://github.com/EmulatorJS/EmulatorJS-Netplay/releases/tag/latest
+Go to the releases tab and download the [latest release](https://github.com/EmulatorJS/EmulatorJS-Netplay/releases/tag/latest) for windows and open the exe file.
 
 There is a GUI app version and a CLI version.
 * The GUI version is recommended for most users.
@@ -34,9 +34,7 @@ You can also download the source code and run `npm i` to install packages and th
 
 ### Linux:
 
-Go to the releases tab and download the latest release for linux and open the AppImage file (you may need to make it executable):
-
-* https://github.com/EmulatorJS/EmulatorJS-Netplay/releases/tag/latest
+Go to the releases tab and download the [latest release](https://github.com/EmulatorJS/EmulatorJS-Netplay/releases/tag/latest) for linux and open the AppImage file (you may need to make it executable).
 
 There is a AppImage version and a CLI version.
 * The AppImage version is recommended for most users.
@@ -48,7 +46,7 @@ You can also use docker to run the server this is recomended for production use 
 
 Download the docker image:
 ```
-docker pull allancoding/emulatorjs-netplay-server
+docker pull allancoding/emulatorjs-netplay-server:latest
 ```
 Run the docker image:
 ```
@@ -61,7 +59,7 @@ docker run -p 3000:3000 -e NETPLAY_PASSWORD=admin123 -e NETPLAY_PORT=3000 allanc
 version: "3.9"
 services:
   emulatorjs-netplay-server:
-    image: allancoding/emulatorjs-netplay-server
+    image: allancoding/emulatorjs-netplay-server:latest
     ports:
       - 3000:3000
     environment:
@@ -84,6 +82,14 @@ npm i
 Start the server:
 ```
 npm start
+```
+You can also use the flags `-p` for port and `-a` for password:
+```
+npm start -- -p 8080 -a admin
+```
+You can run the GUI version with:
+```
+npm run app
 ```
 
 ## Configurating the server
@@ -110,6 +116,12 @@ The default port is `3000` you can change the port in the *config.json* `port` v
 ```
 You can also change the port by setting environment variable `NETPLAY_PORT` to the port you want to use.
 
+### Building
+
+You can build:
+* Windows: `npm run build-win`
+* Linux: `npm run build-linux`
+* Docker: `npm run build-docker`
 # LICENSE
 
 Licenced under the Apache License 2.0
