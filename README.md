@@ -103,6 +103,14 @@ You can run the help with the flag `-h`
 
 ## Configurating the server
 
+Notes:
+* Changing the password is recommended.
+
+Config priority:
+* Flags
+* Environment variables
+* Config file
+
 **Editing the password:**
 
 The username is `admin` and the defalt password is `admin123` you can change the password in the *config.json* `password` value.
@@ -124,6 +132,17 @@ The default port is `3000` you can change the port in the *config.json* `port` v
 }
 ```
 You can also change the port by setting environment variable `NETPLAY_PORT` to the port you want to use.
+
+**Running in dev mode:**
+
+You can run the server in dev mode by setting the `dev` value to `true` in the *config.json* file.
+
+```json
+{
+    "dev" : true
+}
+```
+You can also run the server in dev mode by setting the environment variable `NETPLAY_DEV` to `true`.
 
 ### Building
 

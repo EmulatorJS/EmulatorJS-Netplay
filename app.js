@@ -5,6 +5,7 @@ const cp = require('child_process');
 const config = require('./config.json');
 let port = config.port;
 let password = config.password;
+let dev = config.dev;
 let server;
 
 function createWindow() {
@@ -28,18 +29,12 @@ function createWindow() {
     win.loadFile(path.join(__dirname, 'src/loading.html'));
 }
 
-function startserver(p, a) {
-  let opts = Object.create(process.env);
-  opts.execArgv = ['--harmony'];
-  server = cp.fork(path.join(__dirname, 'server.js'), opts);
-  //server.on('message', function(m) {
-  //  console.log(m);
-  //});
-  server.send({ function: 'start', port: p, password: a});
+function startserver() {
+  server = cp.fork(path.join(__dirname, 'server.js'));
+  server.send({ function: 'start', port: port, password: password, app: true, dev: dev});
 }
 
 function killserver() {
-  server.send({ function: 'kill' });
   if (process.platform !== 'darwin') {
     app.quit();
   }
@@ -52,14 +47,15 @@ app.whenReady().then(() => {
       createWindow();
     }
   });
-  startserver(port, password);
+  startserver();
+});
+
+process.on('message', function(m) {
+  if(m.function == 'kill'){
+      process.exit();
+  }
 });
 
 app.on('window-all-closed', () => {
   killserver();
 });
-
-['SIGINT', 'SIGTERM', 'SIGQUIT'].forEach(signal => process.on(signal, () => {
-  killserver();
-  process.exit();
-}));

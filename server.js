@@ -4,32 +4,22 @@ const server = require('socket.io');
 const argv = require('minimist')(process.argv.slice(2));
 const path = require('path');
 const config = require('./config.json');
-let port = config.port;
-let password = config.password;
-let dev = false;
+let port;
+let password;
+let dev;
 
-if(argv.p){
-    port = argv.p;
-}
-
-if(argv.a){
-    password = argv.a;
-}
-
-if(argv.h || argv._.includes('help')){
-    console.log("Usage: npm start -- [-p port] [-a password]");
-    process.exit();
-}
-
-if(argv.d){
-    dev = true;
-    console.log("Starting server on port " + port + " with password " + password);
-}
-console.dir(process.argv)
-process.on('message', function(m) {
+function consolelog(message){
     if(dev){
-    
+        console.log(message);
     }
+}
+
+process.on('message', function(m) {
     console.log(m);
+    if(m.function == 'start'){
+        port = m.port;
+        password = m.password;
+        dev = m.dev;
+        consolelog("Starting server on port " + port + " with password " + password);
+    }
 });
-//process.send({ foo: 'bar' });
