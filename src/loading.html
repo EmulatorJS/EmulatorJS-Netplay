@@ -3,34 +3,65 @@
 <head>
   <style>
     body {
-        background-color: black;
-        overflow: hidden;
+      background-color: black;
+      overflow: hidden;
     }
 
     .loading-screen {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        color: white;
-        text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      color: white;
+      text-align: center;
     }
 
     .logo {
-        width: 350px;
-        height: 350px;
+      width: 350px;
+      height: 350px;
+      animation: glow 2s ease-in-out infinite;
+    }
+
+    @keyframes glow {
+      0% {
         filter: drop-shadow(0 0 10px white);
+      }
+      50% {
+        filter: drop-shadow(0 0 20px white);
+      }
+      100% {
+        filter: drop-shadow(0 0 10px white);
+      }
     }
 
     .loading-text {
-        font-size: 24px;
-        filter: drop-shadow(0 0 10px white);
+      font-size: 24px;
+      filter: drop-shadow(0 0 10px white);
+      animation: loading-dots 1s infinite;
     }
+
+    @keyframes loading-dots {
+      0% {
+        content: "Starting Server.";
+      }
+      25% {
+        content: "Starting Server..";
+      }
+      50% {
+        content: "Starting Server...";
+      }
+      75% {
+        content: "Starting Server..";
+      }
+      100% {
+        content: "Starting Server.";
+      }
+}
   </style>
 </head>
 <body>
