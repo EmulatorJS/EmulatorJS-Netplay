@@ -5,7 +5,6 @@
         <style>
             body {
                 background-color: black;
-                overflow: hidden;
                 color: white;
             }
 
@@ -27,7 +26,6 @@
             }
 
             .content {
-                position: fixed;
                 top: 0;
                 left: 0;
                 width: 100%;
@@ -35,6 +33,7 @@
                 opacity: 0;
                 transition: opacity 1s ease-in-out;
                 z-index: 2;
+                text-align: center;
             }
 
             .loading-logo {
@@ -43,9 +42,60 @@
                 filter: drop-shadow(0 0 20px white);
             }
 
+            .logo {
+                width: 200px;
+                height: 200px;
+                filter: drop-shadow(0 0 10px white);
+            }
+
             .loading-text {
                 font-size: 24px;
                 filter: drop-shadow(0 0 10px white);
+            }
+
+            h3 {
+                font-size: 24px;
+                margin: 0;
+            }
+
+            .button {
+                background-color: #0098C5;
+                color: #000;
+                font-size: 18px;
+                border: none;
+                border-radius: 5px;
+                padding: 5px 10px;
+                margin-top: 10px;
+                cursor: pointer;
+            }
+
+            .button:hover {
+                background-color: #006888;
+            }
+
+            #status,
+            #nuser {
+                margin: 10px 0;
+            }
+
+            .url-list {
+                list-style-type: none;
+                padding: 0;
+            }
+
+            .url-list li {
+                margin-bottom: 5px;
+            }
+
+            .github-link,
+            .license-link {
+                color: #0098C5;
+                text-decoration: none;
+            }
+
+            .github-link:hover,
+            .license-link:hover {
+                text-decoration: underline;
             }
         </style>
     </head>
@@ -57,19 +107,18 @@
         
           <div id="content" class="content">
             <h1>EmulatorJS Netplay Server</h1>
-            <img width="200px" src="img/logo.png"><br>
-            <hr>
+            <img src="img/logo-light.png" alt="Logo" class="logo">
             <h3>Start/Stop Server</h3>
-            <button onclick="startbutton()" id="startStop"></button>
+            <button onclick="startbutton()" id="startStop" class="button">Start/Stop</button>
             <p id="status"></p>
             <p id="nuser"></p>
             <br>
-            <p>URL to use with emulatorjs</p>
-            <ul id="urls"></ul>
+            <p>URL to use with EmulatorJS:</p>
+            <ul id="urls" class="url-list"></ul>
             <br>
-            <p><a href="https://github.com/EmulatorJS/EmulatorJS-Netplay">View on GitHub</a></p>
+            <p><a href="https://github.com/EmulatorJS/EmulatorJS-Netplay" target="_blank" class="github-link">View on GitHub</a></p>
             <p>Licensed under the Apache License 2.0</p>
-            <p><a href="https://github.com/EmulatorJS/EmulatorJS-Netplay/blob/main/LICENSE">Read the whole license here</a></p>
+            <p><a href="https://github.com/EmulatorJS/EmulatorJS-Netplay/blob/main/LICENSE" target="_blank" class="license-link">Read the whole license here</a></p>
           </div>
         <script> 
             window.addEventListener("load", function() {

@@ -1,0 +1,82 @@
+name: Release Workflow
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: "latest"
+
+      - name: Install dependencies
+        run: npm i
+
+      - name: Build Linux
+        run: npm run build-linux
+
+      - name: Build Windows
+        run: npm run build-win
+
+      - name: Build Docker image
+        run: npm run build-docker
+
+      - name: Publish Docker image to GitHub Packages
+        run: echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin docker tag emulatorjs-netplay-server ghcr.io/${{ github.repository }}/emulatorjs-netplay-server:${{ steps.get_version.outputs.version }} docker push ghcr.io/${{ github.repository }}/emulatorjs-netplay-server:${{ steps.get_version.outputs.version }}
+
+
+      - name: Create and publish release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.get_version.outputs.version }}
+          release_name: Release v${{ steps.get_version.outputs.version }}
+          draft: false
+          prerelease: false
+
+      - name: Upload release assets
+        uses: actions/upload-artifact@v2
+        with:
+          name: release-assets
+          path: dist/
+
+      - name: Update latest release
+        uses: actions/github-script@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          script: |
+            const { Octokit } = require("@octokit/rest");
+
+            const octokit = new Octokit({
+              auth: process.env.GITHUB_TOKEN,
+            });
+
+            const { owner, repo } = github.context.repo;
+            const latestRelease = await octokit.repos.getLatestRelease({
+              owner,
+              repo,
+            });
+
+            await octokit.repos.updateRelease({
+              owner,
+              repo,
+              release_id: latestRelease.data.id,
+              tag_name: latestRelease.data.tag_name,
+              name: latestRelease.data.name,
+              body: latestRelease.data.body,
+              prerelease: latestRelease.data.prerelease,
+              target_commitish: latestRelease.data.target_commitish,
+              draft: latestRelease.data.draft,
+            });
