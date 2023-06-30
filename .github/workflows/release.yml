@@ -24,11 +24,16 @@ jobs:
       - name: Build Windows
         run: npm run build-win
 
+      - name: list files
+        run: ls -la dist
+
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v2
         with:
           name: windows-artifacts
-          path: dist/
+          path: |
+            dist/*.exe
+            dist/*.zip
 
   build-linux:
     runs-on: ubuntu-latest
@@ -48,11 +53,16 @@ jobs:
       - name: Build Linux
         run: npm run build-linux
 
+      - name: list files
+        run: ls -la dist
+
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v2
         with:
           name: linux-artifacts
-          path: dist/
+          path: |
+            dist/*.AppImage
+            dist/*.zip
 
   build-docker:
     runs-on: ubuntu-latest
@@ -83,11 +93,15 @@ jobs:
           docker push ghcr.io/emulatorjs/emulatorjs-netplay/emulatorjs-netplay-server:${{ steps.get_version.outputs.version }}
           docker tag emulatorjs-netplay-server ghcr.io/emulatorjs/emulatorjs-netplay/emulatorjs-netplay-server:latest
           docker push ghcr.io/emulatorjs/emulatorjs-netplay/emulatorjs-netplay-server:latest
+
+      - name: list files
+        run: ls -la
+
       - name: Upload Docker artifact
         uses: actions/upload-artifact@v2
         with:
           name: docker-artifact
-          path: ./docker-compose.yml
+          path: docker-compose.yml
 
   create-release:
     needs: [build-windows, build-linux, build-docker]
@@ -109,10 +123,22 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Download release assets
+      - name: Download windows artifacts
         uses: actions/download-artifact@v2
         with:
-          name: release-assets
+          name: windows-artifacts
+          path: dist/
+
+      - name: Download linux artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: linux-artifacts
+          path: dist/
+
+      - name: Download docker artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: docker-artifact
           path: dist/
 
       - name: Upload release assets
