@@ -59,6 +59,10 @@ jobs:
       
       - name: Build Docker image
         run: npm run build-docker
+
+      - name: Get version
+        id: get_version
+        run: echo ::set-output name=version::$(node -p "require('./package.json').version")
       
       - name: Publish Docker image to GitHub Packages
         run: |
@@ -71,6 +75,10 @@ jobs:
     runs-on: ubuntu-latest
       
     steps:
+      - name: Get version
+        id: get_version
+        run: echo ::set-output name=version::$(node -p "require('./package.json').version")
+      
       - name: Create and publish release
         id: create_release
         uses: actions/create-release@v1
