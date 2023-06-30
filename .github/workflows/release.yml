@@ -24,9 +24,6 @@ jobs:
       - name: Build Windows
         run: npm run build-win
 
-      - name: list files
-        run: dir dist /s /b
-
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v2
         with:
@@ -93,7 +90,9 @@ jobs:
           docker push ghcr.io/emulatorjs/emulatorjs-netplay/emulatorjs-netplay-server:latest
 
       - name: Copy docker-compose.yml
-        run: cp docker-compose.yml dist/docker-compose.yml
+        run: |
+          ls -la
+          cp docker-compose.yml dist/docker-compose.yml
 
       - name: Upload Docker artifact
         uses: actions/upload-artifact@v2
@@ -144,6 +143,12 @@ jobs:
         with:
           name: release-assets
           path: dist/
+
+      - name: Rename Files
+        run: |
+          mv "dist/emulatorjs-netplay-server" "dist/EmulatorJS Netplay Server-linux-${{ steps.get_version.outputs.version }}"
+          mv "dist/emulatorjs-netplay-server-${{ steps.get_version.outputs.version }}.zip" "dist/EmulatorJS Netplay Server-linux-${{ steps.get_version.outputs.version }}.zip"
+          mv "dist/EmulatorJS Netplay Server-${{ steps.get_version.outputs.version }}.AppImage" "dist/EmulatorJS Netplay Server-linux-${{ steps.get_version.outputs.version }}.AppImage"
 
       - name: Update latest release
         uses: actions/github-script@v5
