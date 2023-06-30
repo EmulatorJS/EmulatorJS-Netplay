@@ -28,20 +28,21 @@ function startserver() {
             return reject();
         }
         res.sendFile(path.join(__dirname + '/src/' +'index.html'));
-        if(appserver){
-            process.send({ function: 'url', url: 'http://localhost:' + port});
-        }
     });
     app.get('/img/:imageName', function(req, res) {
         const image = req.params['imageName'];
         try {
-            res.sendFile(path.join(__dirname + 'src/img' + image));
+            res.sendFile(path.join(__dirname + '/src/img/' + image));
         } catch (err) {
             res.sendStatus(401)
         }
     });
     server.listen(port || 3000, '0.0.0.0', () => {
         consolelog("Starting server on port " + (port || 3000) + " with password " + password);
+        if(appserver){
+            process.send({ function: 'url', url: 'http://localhost:' + port});
+            console.log(appserver);
+        }
     });
 }
 
@@ -59,5 +60,7 @@ process.on('message', function(m) {
         dev = m.dev;
         appserver = m.app;
         startserver();
+    }else if(m.function == 'kill'){
+        process.exit();
     }
 });

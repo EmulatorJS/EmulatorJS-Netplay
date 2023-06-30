@@ -1,6 +1,6 @@
 const electron = require('electron');
 const path = require('path');
-const { app, BrowserWindow } = electron;
+const { app, BrowserWindow, ipcMain } = electron;
 const cp = require('child_process');
 const config = require('./config.json');
 let port = config.port;
@@ -19,7 +19,7 @@ function createWindow() {
       transparent: false,
       center: true,
       webPreferences: {
-        preload: path.join(__dirname, 'index.js'),
+        preload: path.join(__dirname, 'src/inject.js'),
 		    nodeIntegration: true,
 		    nativeWindowOpen: true
       },
@@ -33,28 +33,30 @@ function createWindow() {
 function startserver() {
   server = cp.fork(path.join(__dirname, 'server.js'));
   server.send({ function: 'start', port: port, password: password, app: true, dev: dev});
+  server.on('exit', function(code) {
+    process.exit();
+  });
 }
 
 function killserver() {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  server.send({ function: 'kill' });
 }
 
+ipcMain.on('start', (event, title) => {
+  startserver();
+})
+
 app.whenReady().then(() => {
-  createWindow()
+  createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
     }
   });
-  startserver();
 });
 
 process.on('message', function(m) {
-  if(m.function == 'kill'){
-      process.exit();
-  }else if(m.function == 'url'){
+  if(m.function == 'url'){
       win.loadURL(m.url);
   }
 });
