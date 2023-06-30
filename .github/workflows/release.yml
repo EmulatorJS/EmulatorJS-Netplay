@@ -25,7 +25,7 @@ jobs:
         run: npm run build-win
 
       - name: list files
-        run: cd dist && dir /s /b
+        run: dir dist /s /b
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v2
@@ -92,14 +92,14 @@ jobs:
           docker tag emulatorjs-netplay-server ghcr.io/emulatorjs/emulatorjs-netplay/emulatorjs-netplay-server:latest
           docker push ghcr.io/emulatorjs/emulatorjs-netplay/emulatorjs-netplay-server:latest
 
-      - name: list files
-        run: ls -la
+      - name: Copy docker-compose.yml
+        run: cp docker-compose.yml dist/docker-compose.yml
 
       - name: Upload Docker artifact
         uses: actions/upload-artifact@v2
         with:
           name: docker-artifact
-          path: ${{ github.workspace }}/docker-compose.yml
+          path: dist/docker-compose.yml
 
   create-release:
     needs: [build-windows, build-linux, build-docker]
