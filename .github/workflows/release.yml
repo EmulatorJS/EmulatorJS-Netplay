@@ -24,6 +24,12 @@ jobs:
       - name: Build Windows
         run: npm run build-win
 
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: windows-artifacts
+          path: dist/
+
   build-linux:
     runs-on: ubuntu-latest
 
@@ -41,6 +47,12 @@ jobs:
 
       - name: Build Linux
         run: npm run build-linux
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: linux-artifacts
+          path: dist/
 
   build-docker:
     runs-on: ubuntu-latest
@@ -69,6 +81,13 @@ jobs:
           echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
           docker tag emulatorjs-netplay-server ghcr.io/emulatorjs/emulatorjs-netplay/emulatorjs-netplay-server:${{ steps.get_version.outputs.version }}
           docker push ghcr.io/emulatorjs/emulatorjs-netplay/emulatorjs-netplay-server:${{ steps.get_version.outputs.version }}
+          docker tag emulatorjs-netplay-server ghcr.io/emulatorjs/emulatorjs-netplay/emulatorjs-netplay-server:latest
+          docker push ghcr.io/emulatorjs/emulatorjs-netplay/emulatorjs-netplay-server:latest
+      - name: Upload Docker artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: docker-artifact
+          path: ./docker-compose.yml
 
   create-release:
     needs: [build-windows, build-linux, build-docker]
@@ -89,6 +108,12 @@ jobs:
           release_name: Release v${{ steps.get_version.outputs.version }}
           draft: false
           prerelease: false
+
+      - name: Download release assets
+        uses: actions/download-artifact@v2
+        with:
+          name: release-assets
+          path: dist/
 
       - name: Upload release assets
         uses: actions/upload-artifact@v2

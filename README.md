@@ -46,25 +46,33 @@ You can also use docker to run the server this is recomended for production use 
 
 Download the docker image:
 ```
-docker pull allancoding/emulatorjs-netplay-server:latest
+docker pull ghcr.io/emulatorjs/emulatorjs-netplay/emulatorjs-netplay-server:latest
 ```
 Run the docker image:
 ```
-docker run -p 3000:3000 -e NETPLAY_PASSWORD=admin123 -e NETPLAY_PORT=3000 allancoding/emulatorjs-netplay-server
+docker run -p 3000:3000 -e NETPLAY_PASSWORD=admin123 -e NETPLAY_PORT=3000 -e NETPLAY_DEV=false ghcr.io/emulatorjs/emulatorjs-netplay/emulatorjs-netplay-server:latest
 ```
 
 ### Docker Compose:
+
+To run the server with docker compose you can use this docker-compose.yml file:
 
 ```
 version: "3.9"
 services:
   emulatorjs-netplay-server:
-    image: allancoding/emulatorjs-netplay-server:latest
+    image: ghcr.io/emulatorjs/emulatorjs-netplay/emulatorjs-netplay-server:latest
     ports:
       - 3000:3000
     environment:
       - NETPLAY_PASSWORD=admin123
       - NETPLAY_PORT=3000
+      - NETPLAY_DEV=false
+```
+
+Then run:
+```
+docker-compose up
 ```
 
 ### Development:
