@@ -1,24 +1,89 @@
 <html>
     <head>
-        <title>Emulatorjs | Netplay Server</title>
+        <title>EmulatorJS | Netplay Server</title>
         <link rel="icon" type="image/png" href="img/icon.ico">
+        <style>
+            body {
+                background-color: black;
+                overflow: hidden;
+                color: white;
+            }
+
+            .loading-screen {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                color: white;
+                text-align: center;
+                opacity: 1;
+                transition: opacity 1s ease-in-out;
+                z-index: 1;
+            }
+
+            .content {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                opacity: 0;
+                transition: opacity 1s ease-in-out;
+                z-index: 2;
+            }
+
+            .loading-logo {
+                width: 350px;
+                height: 350px;
+                filter: drop-shadow(0 0 20px white);
+            }
+
+            .loading-text {
+                font-size: 24px;
+                filter: drop-shadow(0 0 10px white);
+            }
+        </style>
     </head>
     <body>
-        <h1>Emuserver - EmulatorJS</h1>
-        <img width="200px" src="img/logo.png"><br>
-        <hr>
-        <h3>Start/Stop Server</h3><button onclick="startbutton()" id="startStop"></button>
-        <p id="status"></p>
-        <p id="nuser"></p>
-        <br>
-        <p>URL to use with emulatorjs</p>
-        <ul id="urls">
-        </ul>
-        <br>
-        <p><a href="https://github.com/ethanaobrien/emuserver">View on github</a></p>
-        <p>Licenced under the Apache License 2.0</p>
-        <p><a href="https://github.com/ethanaobrien/emuserver/blob/main/LICENSE">Read the whole license here</a></p>
+        <div id="loading" class="loading-screen">
+            <img src="./img/logo-light.png" alt="Logo" class="loading-logo">
+            <p class="loading-text">Loading Server...</p>
+          </div>
+        
+          <div id="content" class="content">
+            <h1>EmulatorJS Netplay Server</h1>
+            <img width="200px" src="img/logo.png"><br>
+            <hr>
+            <h3>Start/Stop Server</h3>
+            <button onclick="startbutton()" id="startStop"></button>
+            <p id="status"></p>
+            <p id="nuser"></p>
+            <br>
+            <p>URL to use with emulatorjs</p>
+            <ul id="urls"></ul>
+            <br>
+            <p><a href="https://github.com/EmulatorJS/EmulatorJS-Netplay">View on GitHub</a></p>
+            <p>Licensed under the Apache License 2.0</p>
+            <p><a href="https://github.com/EmulatorJS/EmulatorJS-Netplay/blob/main/LICENSE">Read the whole license here</a></p>
+          </div>
         <script> 
+            window.addEventListener("load", function() {
+                const loadingScreen = document.getElementById("loading");
+                const content = document.getElementById("content");
+                setTimeout(function() {
+                    loadingScreen.style.opacity = 0;
+                    content.style.opacity = 1;
+                }, 1000);
+                setTimeout(function() {
+                    loadingScreen.remove();
+                }, 2000);
+            });
+
             var startstop = document.getElementById('startStop');
             function startbutton(){
                 if (startstop.textContent === 'Start'){
