@@ -89,16 +89,11 @@ jobs:
           docker tag emulatorjs-netplay-server ghcr.io/emulatorjs/emulatorjs-netplay/emulatorjs-netplay-server:latest
           docker push ghcr.io/emulatorjs/emulatorjs-netplay/emulatorjs-netplay-server:latest
 
-      - name: Copy docker-compose.yml
-        run: |
-          ls -la
-          cp docker-compose.yml dist/docker-compose.yml
-
       - name: Upload Docker artifact
         uses: actions/upload-artifact@v2
         with:
           name: docker-artifact
-          path: dist/docker-compose.yml
+          path: docker-compose.yml
 
   create-release:
     needs: [build-windows, build-linux, build-docker]
@@ -148,7 +143,10 @@ jobs:
         run: |
           mv "dist/emulatorjs-netplay-server" "dist/EmulatorJS Netplay Server-linux-${{ steps.get_version.outputs.version }}"
           mv "dist/emulatorjs-netplay-server-${{ steps.get_version.outputs.version }}.zip" "dist/EmulatorJS Netplay Server-linux-${{ steps.get_version.outputs.version }}.zip"
-          mv "dist/EmulatorJS Netplay Server-${{ steps.get_version.outputs.version }}.AppImage" "dist/EmulatorJS Netplay Server-linux-${{ steps.get_version.outputs.version }}.AppImage"
+          mv "dist/EmulatorJS Netplay Server-${{ steps.get_version.outputs.version }}.AppImage" "dist/EmulatorJS Netplay Server App-linux-${{ steps.get_version.outputs.version }}.AppImage"
+          mv "dist/EmulatorJS Netplay Server ${{ steps.get_version.outputs.version }}.exe" "dist/EmulatorJS Netplay Server App-windows-${{ steps.get_version.outputs.version }}.exe"
+          mv "dist/EmulatorJS Netplay Server-${{ steps.get_version.outputs.version }}-win.zip" "dist/EmulatorJS Netplay Server-windows-${{ steps.get_version.outputs.version }}.zip"
+          mv "dist/emulatorjs-netplay-server.exe" "dist/EmulatorJS Netplay Server-windows-${{ steps.get_version.outputs.version }}.exe"
 
       - name: Update latest release
         uses: actions/github-script@v5
