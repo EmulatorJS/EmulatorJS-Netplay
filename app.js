@@ -33,6 +33,11 @@ function createWindow() {
 function startserver() {
   server = cp.fork(path.join(__dirname, 'server.js'));
   server.send({ function: 'start', port: port, password: password, app: true, dev: dev});
+  server.on('message', function(m) {
+    if(m.function == 'url'){
+      win.loadURL(m.url);
+    }
+  });
   server.on('exit', function(code) {
     process.exit();
   });
@@ -55,10 +60,9 @@ app.whenReady().then(() => {
   });
 });
 
-process.on('message', function(m) {
-  if(m.function == 'url'){
-      win.loadURL(m.url);
-  }
+app.on('login', (event, webContents, request, authInfo, callback) => {
+  event.preventDefault();
+  callback("admin", password);
 });
 
 app.on('window-all-closed', () => {

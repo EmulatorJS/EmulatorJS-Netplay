@@ -41,7 +41,6 @@ function startserver() {
         consolelog("Starting server on port " + (port || 3000) + " with password " + password);
         if(appserver){
             process.send({ function: 'url', url: 'http://localhost:' + port});
-            console.log(appserver);
         }
     });
 }
