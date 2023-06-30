@@ -23,8 +23,8 @@ jobs:
 
       - name: Build Windows
         run: npm run build-win
-        
-  build-linux-and-docker-and-release:
+
+  build-linux:
     runs-on: ubuntu-latest
 
     steps:
@@ -42,20 +42,35 @@ jobs:
       - name: Build Linux
         run: npm run build-linux
 
-      - name: Build Windows
-        run: npm run build-win
-
+  build-docker:
+    runs-on: ubuntu-latest
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 'latest'
+      
+      - name: Install dependencies
+        run: npm ci
+      
       - name: Build Docker image
         run: npm run build-docker
-
+      
       - name: Publish Docker image to GitHub Packages
         run: |
-          npm run build-docker
           echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
           docker tag emulatorjs-netplay-server ghcr.io/${{ github.repository }}/emulatorjs-netplay-server:${{ steps.get_version.outputs.version }}
           docker push ghcr.io/${{ github.repository }}/emulatorjs-netplay-server:${{ steps.get_version.outputs.version }}
 
-
+  create-release:
+    needs: [build-windows, build-linux, build-docker]
+    runs-on: ubuntu-latest
+      
+    steps:
       - name: Create and publish release
         id: create_release
         uses: actions/create-release@v1
