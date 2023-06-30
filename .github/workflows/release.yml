@@ -68,7 +68,7 @@ jobs:
         run: |
           echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
           docker tag emulatorjs-netplay-server ghcr.io/emulatorjs/emulatorjs-netplay/emulatorjs-netplay-server:${{ steps.get_version.outputs.version }}
-          docker push ghcr.io/emulatorjs/emulatorjs-netplay/femulatorjs-netplay-server:${{ steps.get_version.outputs.version }}
+          docker push ghcr.io/emulatorjs/emulatorjs-netplay/emulatorjs-netplay-server:${{ steps.get_version.outputs.version }}
 
   create-release:
     needs: [build-windows, build-linux, build-docker]
