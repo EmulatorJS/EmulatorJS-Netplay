@@ -18,23 +18,31 @@ jobs:
         with:
           node-version: "latest"
 
-      - run: git fetch --all --tags
+      - name: Install dependencies
+        run: git fetch --all --tags
 
-      - name: Check Release Version
-        uses: thebongy/version-check@v1
-        with:
-          file: package.json
-          failBuild: false
-        id: version_check_staging
-      - name:
-        run: |
-          echo "Version ${{steps.version_check_staging.outputs.releaseVersion}}"
+      - name: Get current version
+        id: version
+        run: echo "::set-output name=current_version::$(node -p "require('./package.json').version")"
+
+      - name: Get previous version from tag
+        id: previous_version
+        run: echo "::set-output name=previous_version::$(git describe --tags --abbrev=0)"
 
       - name: Compare versions
-        id: version_changed
+        id: version_chomparison
         run: |
-            echo "::set-output name=version_changed::${{steps.version_check_staging.outputs.versionChange}}"
-            echo "Version changed: ${{steps.version_check_staging.outputs.versionChange}}"
+          current_version="${{ steps.version.outputs.current_version }}"
+          previous_version="${{ steps.previous_version.outputs.previous_version }}"
+          
+          if [[ "${current_version}" != "${previous_version}" ]]; then
+            echo "Version has changed!"
+            echo "::set-output name=version_changed::true"
+          else
+            echo "Version has not changed."
+            echo "::set-output name=version_changed::false"
+          fi
+
       - name: Purge artifacts
         uses: kolpav/purge-artifacts-action@v1
         with:
