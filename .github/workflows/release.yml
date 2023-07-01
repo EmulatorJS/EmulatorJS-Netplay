@@ -267,3 +267,8 @@ jobs:
           asset_path: dist/EmulatorJS Netplay Server App-windows-${{ steps.get_version.outputs.version }}.exe
           asset_name: EmulatorJS Netplay Server App-windows-${{ steps.get_version.outputs.version }}.exe
           asset_content_type: application/exe
+          
+      - uses: kolpav/purge-artifacts-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          expire-in: 0
