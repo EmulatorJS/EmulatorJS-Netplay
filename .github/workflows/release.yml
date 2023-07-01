@@ -27,7 +27,7 @@ jobs:
       
       - name: Get last commit hash
         id: last_commit
-        run: echo "::set-output name=commit_hash::$(git rev-parse HEAD)"
+        run: echo "::set-output name=commit_hash::$(git rev-parse HEAD^1)"
 
       - name: Get previous version
         id: previous_version
