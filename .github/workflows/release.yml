@@ -30,8 +30,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "::set-output name=previous_version::$(curl -s -H 'Authorization: Bearer $GITHUB_TOKEN' 'https://api.github.com/repos/${{ github.repository }}/commits?path=package.json' | jq -r '.[0].commit.message' | grep -oE '\"version\": \"[0-9]+\.[0-9]+\.[0-9]+\"' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')"
-            
+          commit_sha=$(git rev-parse HEAD)
+          commit_path=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/${{ github.repository }}/commits/$commit_sha" | jq -r '.files[] | select(.filename == "package.json") | .filename')
+          if [[ -n $commit_path ]]; then
+            previous_version=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/${{ github.repository }}/contents/$commit_path" | jq -r '.content' | base64 -d | jq -r '.version')
+            echo "::set-output name=previous_version::$previous_version"
+          else
+            echo "package.json not found in the last commit."
+            echo "::set-output name=previous_version::"
+          fi
+
       - name: Compare versions
         id: version_changed
         run: |
@@ -41,9 +49,11 @@ jobs:
           if [[ "${current_version}" != "${previous_version}" ]]; then
             echo "Version has changed!"
             echo "::set-output name=version_changed::true"
+            echo ${{ needs.check-version.outputs.version_changed }}
           else
             echo "Version has not changed."
             echo "::set-output name=version_changed::false"
+            echo ${{ needs.check-version.outputs.version_changed }}
           fi
 
       - name: Purge artifacts
@@ -55,7 +65,7 @@ jobs:
   build-windows:
     needs: [check-version]
     runs-on: windows-latest
-    if: ${{ needs.check_version.outputs.version_changed == 'true' }}
+    if: ${{ needs.check-version.outputs.version_changed == 'true' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -82,7 +92,7 @@ jobs:
   build-linux:
     needs: [check-version]
     runs-on: ubuntu-latest
-    if: ${{ needs.check_version.outputs.version_changed == 'true' }}
+    if: ${{ needs.check-version.outputs.version_changed == 'true' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -110,7 +120,7 @@ jobs:
   build-docker:
     needs: [check-version]
     runs-on: ubuntu-latest
-    if: ${{ needs.check_version.outputs.version_changed == 'true' }}
+    if: ${{ needs.check-version.outputs.version_changed == 'true' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -146,7 +156,7 @@ jobs:
 
   create-release:
     needs: [build-windows, build-linux, build-docker, check-version]
-    if: ${{ needs.check_version.outputs.version_changed == 'true' }}
+    if: ${{ needs.check-version.outputs.version_changed == 'true' }}
     runs-on: ubuntu-latest
       
     steps:
