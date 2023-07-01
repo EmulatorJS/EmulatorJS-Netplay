@@ -25,6 +25,10 @@ jobs:
         id: version
         run: echo "::set-output name=current_version::$(node -p "require('./package.json').version")"
       
+      - name: Get last commit hash
+        id: last_commit
+        run: echo "::set-output name=commit_hash::$(git rev-parse HEAD)"
+
       - name: Get previous version
         id: previous_version
         env:
@@ -32,7 +36,7 @@ jobs:
         run: |
           git config --global user.email "emulatorjs@gmail.com"
           git config --global user.name "EmulatorJS"
-          git revert HEAD
+          git revert ${{ steps.last_commit.outputs.commit_hash }}
           echo "::set-output name=previous_version::$(node -p "require('./package.json').version")"
 
       - name: Compare versions
