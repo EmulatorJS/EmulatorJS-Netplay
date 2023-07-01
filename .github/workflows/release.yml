@@ -187,7 +187,10 @@ jobs:
           mv "dist/emulatorjs-netplay-server.exe" "dist/EmulatorJS Netplay Server-windows-${{ needs.check-version.outputs.version }}.exe"
       
       - name: Create Release Notes
-        run: npx -y --quiet changelog-maker --markdown --group --commit-url=https://github.com/EmulatorJS/EmulatorJS-Netplay/commit/{ref} >> CHANGELOG.md
+        id: changelog
+        run: |
+          npx -y --quiet changelog-maker --markdown --group --commit-url=https://github.com/EmulatorJS/EmulatorJS-Netplay/commit/{ref} >> CHANGELOG.md
+          echo "::set-output name=releasenotes::$(cat CHANGELOG.md)"
           
       - name: Create Release
         id: create_release
@@ -201,7 +204,7 @@ jobs:
           prerelease: false
           body: |
             ## Changelog
-            $(cat CHANGELOG.md)
+            ${{ steps.changelog.outputs.releasenotes }}
 
       - name: Upload Release Asset Docker
         id: upload-release-asset-docker
