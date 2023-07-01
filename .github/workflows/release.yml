@@ -25,17 +25,18 @@ jobs:
         id: version
         run: echo "::set-output name=current_version::$(node -p "require('./package.json').version")"
 
-      - name: Get previous version from tag
-        id: previous_version
-        run: |
-          echo "::set-output name=previous_version::$(git describe --abbrev=0 --tags)"
-          git describe --abbrev=0 --tags
+      - name: Get Previous tag
+        id: previous_tag
+        uses: "WyriHaximus/github-action-get-previous-tag@v1"
+        with:
+          fallback: 0.0.1
+          prefix: v
 
       - name: Compare versions
-        id: version_chomparison
+        id: version_changed
         run: |
-          current_version="${{ steps.version.outputs.current_version }}"
-          previous_version="${{ steps.previous_version.outputs.previous_version }}"
+          current_version="v${{ steps.version.outputs.current_version }}"
+          previous_version="${{ steps.previous_tag.outputs.tag }}"
           
           if [[ "${current_version}" != "${previous_version}" ]]; then
             echo "Version has changed!"
