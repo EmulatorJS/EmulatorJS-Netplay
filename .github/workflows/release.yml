@@ -25,7 +25,9 @@ jobs:
 
       - name: Get current version
         id: version
-        run: echo 'version=$(node -p "require('./package.json').version")' >> $GITHUB_OUTPUT
+        run: |
+          version=$(node -p "require('./package.json').version")
+          echo version=${version} >> $GITHUB_OUTPUT
 
       - name: Get Previous tag
         id: previous_tag
@@ -37,7 +39,8 @@ jobs:
       - name: Compare versions
         id: version_changed
         run: |
-          current_version="v$(node -p "require('./package.json').version")"
+          version=$(node -p "require('./package.json').version")
+          current_version="v${version}
           previous_version="${{ steps.previous_tag.outputs.tag }}"
           
           if [[ "${current_version}" != "${previous_version}" ]]; then
