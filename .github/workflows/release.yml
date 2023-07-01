@@ -37,7 +37,7 @@ jobs:
       - name: Compare versions
         id: version_changed
         run: |
-          current_version="v${{ steps.version.outputs.current_version }}"
+          current_version="v${{ steps.get_version.outputs.version }}"
           previous_version="${{ steps.previous_tag.outputs.tag }}"
           
           if [[ "${current_version}" != "${previous_version}" ]]; then
