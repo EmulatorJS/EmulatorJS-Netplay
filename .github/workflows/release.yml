@@ -30,15 +30,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          commit_sha=$(git rev-parse HEAD)
-          commit_path=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/${{ github.repository }}/commits/$commit_sha" | jq -r '.files[] | select(.filename == "package.json") | .filename')
-          if [[ -n $commit_path ]]; then
-            previous_version=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/${{ github.repository }}/contents/$commit_path" | jq -r '.content' | base64 -d | jq -r '.version')
-            echo "::set-output name=previous_version::$previous_version"
-          else
-            echo "package.json not found in the last commit."
-            echo "::set-output name=previous_version::"
-          fi
+          git reset HEAD~1
+          echo "::set-output name=previous_version::$(node -p "require('./package.json').version")"
 
       - name: Compare versions
         id: version_changed
