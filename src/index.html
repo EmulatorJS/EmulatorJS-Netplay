@@ -108,12 +108,9 @@
           <div id="content" class="content">
             <h1>EmulatorJS Netplay Server</h1>
             <img src="img/logo-light.png" alt="Logo" class="logo">
-            <h3>Server Info:</h3>
-            <p>Runing on port: <b>3000</b></p>
-            <p>Password is: <b>admin123</b></p>
+            <p id="info">Server info</p>
             <h3>Server Options:</h3>
             <button onclick="startbutton()" id="server" class="button">Start Server</button>
-            <button onclick="changeport()" id="port" class="button">Change Port</button>
             <p id="status"></p>
             <p id="nuser"></p>
             <br>
@@ -136,6 +133,26 @@
                     loadingScreen.remove();
                 }, 2000);
             });
+
+            (function() {
+                status().then(info => {
+                    document.getElementById('info').innerHTML = "Running server on port " + (info.port || 3000) + " with password " + info.password;
+                });
+                document.getElementById('urls').innerHTML = '<li><a href="'+window.location.protocol+"//"+window.location.hostname+':'+window.location.port+'/" target="_blank" onclick="window.api.openExternal(this.href);event.preventDefault()">'+window.location.protocol+"//"+window.location.hostname+':'+window.location.port+'/</a></li>';
+            })();
+
+            function status() {
+                return fetch('/status', {
+                    method: 'POST',
+                    headers: {
+                    'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    return data;
+                });
+            }
 
             var startstop = document.getElementById('startStop');
             function startbutton(){
@@ -176,10 +193,6 @@
                     update();
                 });
             }
-            (function() {
-                check();
-                document.getElementById('urls').innerHTML = '<li><a href="'+window.location.protocol+"//"+window.location.hostname+':'+window.location.port+'/" target="_blank" onclick="window.api.openExternal(this.href);event.preventDefault()">'+window.location.protocol+"//"+window.location.hostname+':'+window.location.port+'/</a></li>';
-            })();
             function startstopserver(option){
                 fetch('/startstop', {
                     method: 'POST',

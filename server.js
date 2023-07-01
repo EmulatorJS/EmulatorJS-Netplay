@@ -37,6 +37,16 @@ function startserver() {
             res.sendStatus(401)
         }
     });
+    app.post('/status', (req, res) => {
+        const reject = () => {
+            res.setHeader('www-authenticate', 'Basic')
+            res.sendStatus(401)
+        }
+        if (!checkAuth(req.headers.authorization, password)) {
+            return reject();
+        }
+        res.end('{ "port": ' + port + ', "password": "' + password + '", "nofusers": ' + nofusers + ' }');
+    });
     server.listen(port || 3000, '0.0.0.0', () => {
         consolelog("Starting server on port " + (port || 3000) + " with password " + password);
         if(appserver){
