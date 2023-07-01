@@ -33,7 +33,7 @@ jobs:
           echo "::set-output name=previous_version::$(curl -s -H 'Authorization: Bearer $GITHUB_TOKEN' 'https://api.github.com/repos/${{ github.repository }}/commits?path=package.json' | jq -r '.[0].commit.message' | grep -oE '\"version\": \"[0-9]+\.[0-9]+\.[0-9]+\"' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')"
             
       - name: Compare versions
-        id: compare_versions
+        id: version_changed
         run: |
           current_version="${{ steps.version.outputs.current_version }}"
           previous_version="${{ steps.previous_version.outputs.previous_version }}"
