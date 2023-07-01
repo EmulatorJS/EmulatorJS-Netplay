@@ -18,43 +18,23 @@ jobs:
         with:
           node-version: "latest"
 
-      - name: Install dependencies
-        run: npm ci
+      - run: git fetch --all --tags
 
-      - name: Get current version
-        id: version
-        run: echo "::set-output name=current_version::$(node -p "require('./package.json').version")"
-      
-      - name: Get last commit hash
-        id: last_commit
-        run: echo "::set-output name=commit_hash::$(git log -n 2 --skip=1 --pretty=format:'%H' | tail -1)"
-
-      - name: Get previous version
-        id: previous_version
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check Release Version
+        uses: thebongy/version-check@v1
+        with:
+          file: package.json
+          failBuild: false
+        id: version_check_staging
+      - name:
         run: |
-          git config --global user.email "emulatorjs@gmail.com"
-          git config --global user.name "EmulatorJS"
-          git revert ${{ steps.last_commit.outputs.commit_hash }}
-          echo "::set-output name=previous_version::$(node -p "require('./package.json').version")"
+          echo "Version ${{steps.version_check_staging.outputs.releaseVersion}}"
 
       - name: Compare versions
         id: version_changed
         run: |
-          current_version="${{ steps.version.outputs.current_version }}"
-          previous_version="${{ steps.previous_version.outputs.previous_version }}"
-          
-          if [[ "${current_version}" != "${previous_version}" ]]; then
-            echo "Version has changed!"
-            echo "::set-output name=version_changed::true"
-            echo ${{ needs.check-version.outputs.version_changed }}
-          else
-            echo "Version has not changed."
-            echo "::set-output name=version_changed::false"
-            echo ${{ needs.check-version.outputs.version_changed }}
-          fi
-
+            echo "::set-output name=version_changed::${{steps.version_check_staging.outputs.versionChange}}"
+            echo "Version changed: ${{steps.version_check_staging.outputs.versionChange}}"
       - name: Purge artifacts
         uses: kolpav/purge-artifacts-action@v1
         with:
