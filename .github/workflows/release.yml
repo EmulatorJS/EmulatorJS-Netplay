@@ -111,17 +111,6 @@ jobs:
       - name: Get version
         id: get_version
         run: echo ::set-output name=version::$(node -p "require('./package.json').version")
-      
-      - name: Create and publish release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ steps.get_version.outputs.version }}
-          release_name: Release v${{ steps.get_version.outputs.version }}
-          draft: true
-          prerelease: false
 
       - name: Download windows artifacts
         uses: actions/download-artifact@v2
@@ -149,80 +138,33 @@ jobs:
           mv "dist/EmulatorJS Netplay Server ${{ steps.get_version.outputs.version }}.exe" "dist/EmulatorJS Netplay Server App-windows-${{ steps.get_version.outputs.version }}.exe"
           mv "dist/EmulatorJS Netplay Server-${{ steps.get_version.outputs.version }}-win.zip" "dist/EmulatorJS Netplay Server-windows-${{ steps.get_version.outputs.version }}.zip"
           mv "dist/emulatorjs-netplay-server.exe" "dist/EmulatorJS Netplay Server-windows-${{ steps.get_version.outputs.version }}.exe"
-  
-          - name: Upload file to release
-          uses: actions/upload-artifact@v2
-          with:
-            name: dist
-            path: dist
-  
-      - name: Get last release
-        id: get_last_release
-        run: echo "::set-output name=release_id::$(git describe --abbrev=0 --tags)"
-  
-      - name: Get comments from last release
-        id: get_comments
-        run: |
-          last_release=$(git describe --abbrev=0 --tags)
-          git log --format="- %B" $last_release...HEAD > comments.txt
-  
-      - name: Add comments to release description
-        id: update_release_description
-        run: |
-          release_body=$(cat comments.txt)
-          echo $release_body | sed -z 's/\n/\\n/g' > release_body.txt
-          body=$(cat release_body.txt)
-          body="Contributions from previous release:\n\n$body"
-          echo "::set-output name=description::$body"
-  
-      - name: Update release description
+      
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.get_version.outputs.version }}
+          release_name: Release v${{ steps.get_version.outputs.version }}
+          draft: true
+          prerelease: false
+      
+      - name: Set Latest Release
         uses: actions/github-script@v4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const updateRelease = async () => {
-              const { data } = await github.repos.getReleaseByTag({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                tag: `v${{ steps.get_version.outputs.version }}`
-              });
-              const { id } = data;
-              await github.repos.updateRelease({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                release_id: id,
-                body: ${{ steps.update_release_description.outputs.description }}
-              });
-            };  
-            updateRelease();
-  
-      - name: Publish release
-        uses: actions/github-script@v4
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const publishRelease = async () => {
-              const { data } = await github.repos.getReleaseByTag({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                tag: `v${{ steps.get_version.outputs.version }}`
-              });
-              const { id } = data;
-  
-              await github.repos.updateRelease({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                release_id: id,
-                draft: false
-              });
-  
-              await github.repos.updateRelease({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                release_id: id,
-                name: 'Latest Release'
-              });
-            };
-            publishRelease();
-  
+            const { data: refs } = await github.git.listRefs({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              namespace: 'tags',
+            });
+            const latestRef = refs.find(ref => ref.ref === `refs/tags/v${{ steps.get_version.outputs.version }}`);
+            await github.git.updateRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'refs/tags/latest',
+              sha: latestRef.object.sha,
+            });
       
