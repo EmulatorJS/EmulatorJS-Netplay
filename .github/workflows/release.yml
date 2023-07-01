@@ -45,6 +45,11 @@ jobs:
             echo "Version has not changed."
             echo "::set-output name=version_changed::false"
           fi
+          
+      - uses: kolpav/purge-artifacts-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          expire-in: 0
 
   build-windows:
     runs-on: windows-latest
