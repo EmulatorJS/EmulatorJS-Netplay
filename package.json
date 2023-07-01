@@ -12,7 +12,10 @@
   "pkg": {
     "scripts": "**/*.js",
     "assets": "**/*",
-    "targets": [ "latest-linux-x64", "latest-win-x64"],
+    "targets": [
+      "latest-linux-x64",
+      "latest-win-x64"
+    ],
     "outputPath": "dist"
   },
   "build": {
@@ -24,15 +27,14 @@
       ],
       "description": "A Netplay Server For EmulatorJS",
       "category": "Network;Game",
-      "icon" : "src/img/icon.png"
-
+      "icon": "src/img/icon.png"
     },
     "win": {
       "target": [
         "zip",
         "portable"
       ],
-      "icon" : "src/img/icon.ico"
+      "icon": "src/img/icon.ico"
     }
   },
   "scripts": {
@@ -41,8 +43,7 @@
     "app": "electron .",
     "build-win": "electron-builder --win --publish=never && pkg ./ --targets latest-win-x64 --no-bytecode",
     "build-linux": "electron-builder --linux --publish=never && pkg ./ --targets latest-linux-x64 --no-bytecode",
-    "build-docker": "docker build -t emulatorjs-netplay-server .",
-    "release-notes": " "
+    "build-docker": "docker build -t emulatorjs-netplay-server ."
   },
   "dependencies": {
     "express": "^4.18.2",
