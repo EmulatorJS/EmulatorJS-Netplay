@@ -40,7 +40,7 @@ jobs:
         id: version_changed
         run: |
           version=$(node -p "require('./package.json').version")
-          current_version="v${version}
+          current_version=v${version}
           previous_version="${{ steps.previous_tag.outputs.tag }}"
           
           if [[ "${current_version}" != "${previous_version}" ]]; then
