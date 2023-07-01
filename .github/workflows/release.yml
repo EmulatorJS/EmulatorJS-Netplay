@@ -27,7 +27,9 @@ jobs:
 
       - name: Get previous version from tag
         id: previous_version
-        run: echo "::set-output name=previous_version::$(git describe --tags --abbrev=0)"
+        run: |
+          echo "::set-output name=previous_version::$(git describe --abbrev=0 --tags)"
+          git describe --abbrev=0 --tags
 
       - name: Compare versions
         id: version_chomparison
