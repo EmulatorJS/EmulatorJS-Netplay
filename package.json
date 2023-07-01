@@ -42,7 +42,7 @@
     "build-win": "electron-builder --win --publish=never && pkg ./ --targets latest-win-x64 --no-bytecode",
     "build-linux": "electron-builder --linux --publish=never && pkg ./ --targets latest-linux-x64 --no-bytecode",
     "build-docker": "docker build -t emulatorjs-netplay-server .",
-    "release-notes": "CHANGELO"
+    "release-notes": "CHANGEL"
   },
   "dependencies": {
     "express": "^4.18.2",
