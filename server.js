@@ -3,6 +3,11 @@ const express = require('express');
 const Server = require('socket.io');
 const path = require('path');
 const app = express();
+const os = require('os');
+const { get } = require('https');
+let interfaces = os.networkInterfaces();
+let mainserver = true;
+let addresses = [];
 let nofusers = 0;
 let port;
 let password;
@@ -46,6 +51,45 @@ function startserver() {
             return reject();
         }
         res.end('{ "port": ' + port + ', "password": "' + password + '", "nofusers": ' + nofusers + ' }');
+    });
+    app.post('/interface', (req, res) => {
+        const reject = () => {
+            res.setHeader('www-authenticate', 'Basic')
+            res.sendStatus(401)
+        }
+        if (!checkAuth(req.headers.authorization, password)) {
+            return reject();
+        }
+        for (let k in interfaces) {
+            for (let k2 in interfaces[k]) {
+                let address = interfaces[k][k2];
+                if (address.family === 'IPv4') {
+                    addresses.push("http://"+address.address+":"+port+"/");
+                }
+            }
+        }
+        addresses.push("http://localhost:"+port+"/");
+        res.end('{ "interfaces": ' + JSON.stringify(addresses) + ' }');
+    });
+    app.post('/check', (req, res) => {
+        const reject = () => {
+            res.setHeader('www-authenticate', 'Basic')
+            res.sendStatus(401)
+        }
+        if (!checkAuth(req.headers.authorization, password)) {
+            return reject();
+        }
+        res.end(mainserver.toString());
+    });
+    app.post('/numusers', (req, res) => {
+        const reject = () => {
+            res.setHeader('www-authenticate', 'Basic')
+            res.sendStatus(401)
+        }
+        if (!checkAuth(req.headers.authorization, password)) {
+            return reject();
+        }
+        res.end('{ "users": ' + nofusers + " }");
     });
     server.listen(port || 3000, '0.0.0.0', () => {
         consolelog("Starting server on port " + (port || 3000) + " with password " + password);

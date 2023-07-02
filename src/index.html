@@ -53,11 +53,6 @@
                 filter: drop-shadow(0 0 10px white);
             }
 
-            h3 {
-                font-size: 24px;
-                margin: 0;
-            }
-
             .button {
                 background-color: #0098C5;
                 color: #000;
@@ -65,7 +60,6 @@
                 border: none;
                 border-radius: 5px;
                 padding: 5px 10px;
-                margin-top: 10px;
                 cursor: pointer;
             }
 
@@ -79,23 +73,42 @@
             }
 
             .url-list {
-                list-style-type: none;
                 padding: 0;
+                display: inline-block;
+                text-align: left;
+                margin: 0;
             }
 
             .url-list li {
-                margin-bottom: 5px;
+                margin-bottom: 2px;
             }
 
-            .github-link,
-            .license-link {
+            a {
                 color: #0098C5;
                 text-decoration: none;
             }
 
-            .github-link:hover,
-            .license-link:hover {
+            a:hover {
                 text-decoration: underline;
+            }
+
+            * {
+                scrollbar-width: auto;
+                scrollbar-color: #0097c5 #000000;
+            }
+
+            *::-webkit-scrollbar {
+                width: 10px;
+            }
+
+            *::-webkit-scrollbar-track {
+                background: #000000;
+            }
+
+            *::-webkit-scrollbar-thumb {
+                background-color: #0097c5;
+                border-radius: 10px;
+                border: 0.5px solid #006888;
             }
         </style>
     </head>
@@ -109,19 +122,16 @@
             <h1>EmulatorJS Netplay Server</h1>
             <img src="img/logo-light.png" alt="Logo" class="logo">
             <p id="info">Server info</p>
-            <h3>Server Options:</h3>
-            <button onclick="startbutton()" id="server" class="button">Start Server</button>
+            <button onclick="server()" id="server" class="button">Start Server</button>
             <p id="status"></p>
             <p id="nuser"></p>
-            <br>
-            <p>URL to use with EmulatorJS:</p>
-            <ul id="urls" class="url-list"></ul>
-            <br>
+            <p>URL's to use with EmulatorJS Netplay: <ul id="urls" class="url-list"></ul></p>
             <p><a href="https://github.com/EmulatorJS/EmulatorJS-Netplay" target="_blank" class="github-link">View on GitHub</a></p>
-            <p>Licensed under the Apache License 2.0</p>
-            <p><a href="https://github.com/EmulatorJS/EmulatorJS-Netplay/blob/main/LICENSE" target="_blank" class="license-link">Read the whole license here</a></p>
+            <p>Licensed under the Apache License 2.0 - Read the license <a href="https://github.com/EmulatorJS/EmulatorJS-Netplay/blob/main/LICENSE" target="_blank" class="license-link">here</a></p>
+            <br>
           </div>
         <script> 
+            const startstop = document.getElementById('server');
             window.addEventListener("load", function() {
                 const loadingScreen = document.getElementById("loading");
                 const content = document.getElementById("content");
@@ -135,10 +145,18 @@
             });
 
             (function() {
+                check();
                 status().then(info => {
                     document.getElementById('info').innerHTML = "Running server on port " + (info.port || 3000) + " with password " + info.password;
                 });
-                document.getElementById('urls').innerHTML = '<li><a href="'+window.location.protocol+"//"+window.location.hostname+':'+window.location.port+'/" target="_blank" onclick="window.api.openExternal(this.href);event.preventDefault()">'+window.location.protocol+"//"+window.location.hostname+':'+window.location.port+'/</a></li>';
+                interface().then(address => {
+                    address.interfaces.push(window.location.protocol+"//"+window.location.hostname+':'+window.location.port+'/');
+                    address.interfaces = [...new Set(address.interfaces)];
+                    address.interfaces.forEach(address => {
+                        document.getElementById('urls').innerHTML += '<li><a href="'+address+'" target="_blank" onclick="window.api.openExternal(this.href);event.preventDefault()">'+address+'</a></li>';
+                    });
+                });
+                checkforusers();
             })();
 
             function status() {
@@ -154,14 +172,33 @@
                 });
             }
 
-            var startstop = document.getElementById('startStop');
-            function startbutton(){
-                if (startstop.textContent === 'Start'){
-                    startstopserver("start");
-                }else if(startstop.textContent === 'Stop'){
-                    startstopserver("stop");
-                }
-                update();
+            function interface() {
+                return fetch('/interface', {
+                    method: 'POST',
+                    headers: {
+                    'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    return data;
+                });
+            }
+            function check(){
+                fetch('/check', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }).then(response => response.json())
+                    .then(data => {
+                    if(data == true){
+                        startstop.innerText = 'Stop';
+                    }else if(data == false){
+                        startstop.innerText = 'Start';
+                    }
+                    update();
+                });
             }
             function update(){
                 if(startstop.textContent == "Start"){
@@ -174,24 +211,19 @@
                     console.error("Error!");	
                 }
             }
-            function check(){
-                fetch('/check', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        check: "checking",
-                    })
-                }).then(response => response.json())
-                    .then(data => {
-                    if(data == true){
-                        startstop.innerText = 'Stop';
-                    }else if(data == false){
-                        startstop.innerText = 'Start';
+            function server(){
+                if (startstop.textContent === 'Start'){
+                    startstopserver("start");
+                    while(startstop.textContent === 'Start'){
+                        check();
                     }
-                    update();
-                });
+                }else if(startstop.textContent === 'Stop'){
+                    startstopserver("stop");
+                    while(startstop.textContent === 'Stop'){
+                        check();
+                    }
+                }
+                update();
             }
             function startstopserver(option){
                 fetch('/startstop', {
@@ -221,7 +253,6 @@
                     }
                     update();
                 });
-                location.reload();
             }
             setInterval(function(){ 
                 checkforusers();
@@ -232,17 +263,13 @@
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        "checkn": true
-                    })
+                    }
                 }).then(response => response.json())
                     .then(data => {
                     data = data.users;
                     document.getElementById('nuser').innerHTML = "Users connected: "+data;
                 });	
             }
-            checkforusers();
         </script>
     </body>
 </html>
