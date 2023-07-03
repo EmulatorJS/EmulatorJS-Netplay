@@ -9,6 +9,7 @@ let interfaces = os.networkInterfaces();
 let mainserver = true;
 let addresses = [];
 let nofusers = {num: 3};
+let rooms = {room: []};
 let port;
 let password;
 let dev;
@@ -110,6 +111,34 @@ function startserver() {
             startnetplay();
         }
     });
+    app.get('/list', function(req, res) {
+        if(mainserver){
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Content-Type', 'application/json');
+            let args = transformArgs(req.url)
+            if (!args.game_id || !args.domain || !args.coreVer) {
+                res.end('{}');
+                return;
+            }
+            args.game_id = parseInt(args.game_id);
+            args.coreVer = parseInt(args.coreVer);
+            let rv = {};
+            for (let i=0; i<rooms.room.length; i++) {
+                if (rooms.room[i].domain !== args.domain ||
+                    rooms.room[i].game_id !== args.game_id ||
+                    rooms.room[i].coreVer !== args.coreVer) continue;
+                rv[rooms.room[i].sessionid] = {
+                    owner_name: rooms.room[i].owner.extra.name,
+                    room_name: rooms.room[i].name,
+                    country: 'US',
+                    max: rooms.room[i].max,
+                    current: rooms.room[i].current,
+                    password: (rooms.room[i].password.trim() ? 1 : 0)
+                }
+            }
+            res.end(JSON.stringify(rv));
+        }
+    })
     server.listen(port || 3000, '0.0.0.0', () => {
         if(appserver){
             process.send({ function: 'url', url: 'http://localhost:' + port});
@@ -129,7 +158,7 @@ function startnetplay(){
             credentials: true
         }
     });
-    netplay.start(io, dev, nofusers);
+    netplay.start(io, rooms, nofusers, dev);
 }
 
 function stopnetplay(){
@@ -142,6 +171,21 @@ function consolelog(message){
     if(dev){
         console.log(message);
     }
+}
+
+function transformArgs(url) {
+    var args = {}
+    var idx = url.indexOf('?')
+    if (idx != -1) {
+        var s = url.slice(idx + 1)
+        var parts = s.split('&')
+        for (var i = 0; i < parts.length; i++) {
+            var p = parts[i]
+            var idx2 = p.indexOf('=')
+            args[decodeURIComponent(p.slice(0, idx2))] = decodeURIComponent(p.slice(idx2 + 1, s.length))
+        }
+    }
+    return args
 }
 
 process.on('message', function(m) {
