@@ -41,7 +41,7 @@
     "start": "node index.js",
     "dev": "node index.js -d",
     "app": "electron .",
-    "build-win": "electron-builder --win --publish=never && nexe --build",
+    "build-win": "electron-builder --win --publish=never && npx -y --quiet nexe --build",
     "build-linux": "electron-builder --linux --publish=never",
     "build-docker": "docker build -t emulatorjs-netplay-server ."
   },
