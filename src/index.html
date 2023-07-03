@@ -214,14 +214,8 @@
             function server(){
                 if (startstop.textContent === 'Start'){
                     startstopserver("start");
-                    while(startstop.textContent === 'Start'){
-                        check();
-                    }
                 }else if(startstop.textContent === 'Stop'){
                     startstopserver("stop");
-                    while(startstop.textContent === 'Stop'){
-                        check();
-                    }
                 }
                 update();
             }
@@ -251,7 +245,6 @@
                     }else{
                         console.error("Error!");	
                     }
-                    update();
                 });
             }
             setInterval(function(){ 
