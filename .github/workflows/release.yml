@@ -185,11 +185,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create "v${{ needs.check-version.outputs.version }}" --title "v${{ needs.check-version.outputs.version }}" --generate-notes
-          gh release upload "v${{ needs.check-version.outputs.version }}" dist/EmulatorJS Netplay Server-linux-${{ needs.check-version.outputs.version }}.zip#EmulatorJS Netplay Server-linux-${{ needs.check-version.outputs.version }}.zip
-          gh release upload "v${{ needs.check-version.outputs.version }}" dist/EmulatorJS Netplay Server App-linux-${{ needs.check-version.outputs.version }}.AppImage#EmulatorJS Netplay Server App-linux-${{ needs.check-version.outputs.version }}.AppImage
-          gh release upload "v${{ needs.check-version.outputs.version }}" dist/EmulatorJS Netplay Server-windows-${{ needs.check-version.outputs.version }}.zip#EmulatorJS Netplay Server-windows-${{ needs.check-version.outputs.version }}.zip
-          gh release upload "v${{ needs.check-version.outputs.version }}" dist/EmulatorJS Netplay Server App-windows-${{ needs.check-version.outputs.version }}.exe#EmulatorJS Netplay Server App-windows-${{ needs.check-version.outputs.version }}.exe
-          gh release upload "v${{ needs.check-version.outputs.version }}" checksum.txt#checksum-256.txt
+          gh release upload "v${{ needs.check-version.outputs.version }}" "dist/EmulatorJS Netplay Server-linux-${{ needs.check-version.outputs.version }}.zip#EmulatorJS Netplay Server-linux-${{ needs.check-version.outputs.version }}.zip"
+          gh release upload "v${{ needs.check-version.outputs.version }}" "dist/EmulatorJS Netplay Server App-linux-${{ needs.check-version.outputs.version }}.AppImage#EmulatorJS Netplay Server App-linux-${{ needs.check-version.outputs.version }}.AppImage"
+          gh release upload "v${{ needs.check-version.outputs.version }}" "dist/EmulatorJS Netplay Server-windows-${{ needs.check-version.outputs.version }}.zip#EmulatorJS Netplay Server-windows-${{ needs.check-version.outputs.version }}.zip"
+          gh release upload "v${{ needs.check-version.outputs.version }}" "dist/EmulatorJS Netplay Server App-windows-${{ needs.check-version.outputs.version }}.exe#EmulatorJS Netplay Server App-windows-${{ needs.check-version.outputs.version }}.exe"
+          gh release upload "v${{ needs.check-version.outputs.version }}" "checksum.txt#checksum-256.txt"
 
       - name: Purge artifacts
         uses: kolpav/purge-artifacts-action@v1
