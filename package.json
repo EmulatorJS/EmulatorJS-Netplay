@@ -28,7 +28,7 @@
     }
   },
   "scripts": {
-    "start": "node index.js ",
+    "start": "node index.js",
     "dev": "node index.js -d",
     "app": "electron .",
     "build-win": "electron-builder --win --publish=never",

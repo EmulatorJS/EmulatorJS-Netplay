@@ -1,10 +1,9 @@
 const http = require('http');
 const express = require('express');
-const Server = require('socket.io');
+const { Server } = require('socket.io');
 const path = require('path');
 const app = express();
 const os = require('os');
-const { get } = require('https');
 let interfaces = os.networkInterfaces();
 let mainserver = true;
 let addresses = [];
@@ -14,6 +13,7 @@ let password;
 let dev;
 let appserver;
 let server;
+let io;
 
 function checkAuth(authorization, passwordforserver) {
     if (!authorization) return false;
@@ -91,12 +91,49 @@ function startserver() {
         }
         res.end('{ "users": ' + nofusers + " }");
     });
+    app.post('/startstop', (req, res) => {
+        const reject = () => {
+            res.setHeader('www-authenticate', 'Basic');
+            res.sendStatus(401);
+        }
+        if (!checkAuth(req.headers.authorization, password)) {
+            return reject();
+        }
+        if (req.body.function === "stop") {
+            mainserver = false;
+            res.end('true');
+            stopnetplay();
+        } else {
+            mainserver = true;
+            res.end('true');
+            startnetplay();
+        }
+    });
     server.listen(port || 3000, '0.0.0.0', () => {
-        consolelog("Starting server on port " + (port || 3000) + " with password " + password);
         if(appserver){
             process.send({ function: 'url', url: 'http://localhost:' + port});
         }
+        if(mainserver){
+            startnetplay();
+        }
     });
+}
+
+function startnetplay(){
+    consolelog("Starting Netplay");
+    io = new Server(server, {
+        cors: {
+            origin: "*",
+            methods: ["GET", "POST"],
+            credentials: true
+        }
+    });
+}
+
+function stopnetplay(){
+    consolelog("Stopping Netplay");
+    io.close();
+    startserver();
 }
 
 function consolelog(message){
@@ -113,6 +150,7 @@ process.on('message', function(m) {
         dev = m.dev;
         appserver = m.app;
         startserver();
+        consolelog("Starting server on port " + (port || 3000) + " with password " + password);
     }else if(m.function == 'kill'){
         process.exit();
     }
