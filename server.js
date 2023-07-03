@@ -4,10 +4,11 @@ const { Server } = require('socket.io');
 const path = require('path');
 const app = express();
 const os = require('os');
+const netplay = require("./functions.js");
 let interfaces = os.networkInterfaces();
 let mainserver = true;
 let addresses = [];
-let nofusers = 0;
+let nofusers = {num: 3};
 let port;
 let password;
 let dev;
@@ -50,7 +51,7 @@ function startserver() {
         if (!checkAuth(req.headers.authorization, password)) {
             return reject();
         }
-        res.end('{ "port": ' + port + ', "password": "' + password + '", "nofusers": ' + nofusers + ' }');
+        res.end('{ "port": ' + port + ', "password": "' + password + '", "nofusers": ' + nofusers.num + ' }');
     });
     app.post('/interface', (req, res) => {
         const reject = () => {
@@ -89,7 +90,7 @@ function startserver() {
         if (!checkAuth(req.headers.authorization, password)) {
             return reject();
         }
-        res.end('{ "users": ' + nofusers + " }");
+        res.end('{ "users": ' + nofusers.num + " }");
     });
     app.post('/startstop', (req, res) => {
         const reject = () => {
@@ -128,6 +129,7 @@ function startnetplay(){
             credentials: true
         }
     });
+    netplay.start(io, dev, nofusers);
 }
 
 function stopnetplay(){
