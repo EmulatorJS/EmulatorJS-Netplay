@@ -70,9 +70,6 @@ jobs:
         with:
           node-version: "latest"
 
-      - name: Set up NASM
-        uses: ilammy/setup-nasm@v1
-
       - name: Install dependencies
         run: npm ci
 
@@ -173,8 +170,15 @@ jobs:
           mv "dist/EmulatorJS Netplay Server-${{ needs.check-version.outputs.version }}.AppImage" "dist/EmulatorJS Netplay Server App-linux-${{ needs.check-version.outputs.version }}.AppImage"
           mv "dist/EmulatorJS Netplay Server ${{ needs.check-version.outputs.version }}.exe" "dist/EmulatorJS Netplay Server App-windows-${{ needs.check-version.outputs.version }}.exe"
           mv "dist/EmulatorJS Netplay Server-${{ needs.check-version.outputs.version }}-win.zip" "dist/EmulatorJS Netplay Server-windows-${{ needs.check-version.outputs.version }}.zip"
-          mv "dist/emulatorjs-netplay-server.exe" "dist/EmulatorJS Netplay Server-windows-${{ needs.check-version.outputs.version }}.exe"
       
+      - name: Generate checksum
+        uses: jmgilman/actions-generate-checksum@v1
+        with:
+          patterns: |
+            dist/*.zip
+            dist/*.exe
+            dist/*.AppImage
+
       - name: Create Release & Make Notes & Upload Assets
         id: create_release
         env:
@@ -185,7 +189,7 @@ jobs:
           gh release upload "v${{ needs.check-version.outputs.version }}" dist/EmulatorJS Netplay Server App-linux-${{ needs.check-version.outputs.version }}.AppImage#EmulatorJS Netplay Server App-linux-${{ needs.check-version.outputs.version }}.AppImage
           gh release upload "v${{ needs.check-version.outputs.version }}" dist/EmulatorJS Netplay Server-windows-${{ needs.check-version.outputs.version }}.zip#EmulatorJS Netplay Server-windows-${{ needs.check-version.outputs.version }}.zip
           gh release upload "v${{ needs.check-version.outputs.version }}" dist/EmulatorJS Netplay Server App-windows-${{ needs.check-version.outputs.version }}.exe#EmulatorJS Netplay Server App-windows-${{ needs.check-version.outputs.version }}.exe
-          gh release upload "v${{ needs.check-version.outputs.version }}" dist/EmulatorJS Netplay Server-windows-${{ needs.check-version.outputs.version }}.exe#EmulatorJS Netplay Server-windows-${{ needs.check-version.outputs.version }}.exe
+          gh release upload "v${{ needs.check-version.outputs.version }}" checksum.txt#checksum-256.txt
 
       - name: Purge artifacts
         uses: kolpav/purge-artifacts-action@v1

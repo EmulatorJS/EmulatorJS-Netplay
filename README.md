@@ -26,9 +26,7 @@ License is located [here](#license)
 
 Go to the releases tab and download the [latest release](https://github.com/EmulatorJS/EmulatorJS-Netplay/releases/tag/latest) for windows and open the exe file.
 
-There is a GUI app version and a CLI version.
-* The GUI version is recommended for most users.
-* The CLI version is recommended for advanced users.
+The GUI version is recommended for most users.
 
 You can also download the source code and run `npm i` to install packages and then `npm start` to start the server.
 
@@ -36,9 +34,9 @@ You can also download the source code and run `npm i` to install packages and th
 
 Go to the releases tab and download the [latest release](https://github.com/EmulatorJS/EmulatorJS-Netplay/releases/tag/latest) for linux and open the AppImage file (you may need to make it executable).
 
-There is a AppImage version.
-* The AppImage version is recommended for most users.
-* You can also download the source code and run `npm i` to install packages and then `npm start` to start the server.
+The AppImage version is recommended for most users.
+
+You can also download the source code and run `npm i` to install packages and then `npm start` to start the server.
 
 ### Docker:
 

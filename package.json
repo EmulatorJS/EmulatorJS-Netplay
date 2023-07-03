@@ -8,16 +8,6 @@
     "name": "EmulatorJS",
     "url": "https://github.com/EmulatorJS"
   },
-  "nexe": {
-    "input": "index.js",
-    "output": "dist/emulatorjs-netplay-server.exe",
-    "ico": "src/img/icon.ico",
-    "resources": [
-      "src/**/*",
-      "*.json",
-      "*.js"
-    ]
-  },
   "build": {
     "appId": "org.emulatorjs.netplay.server",
     "linux": {
@@ -41,7 +31,7 @@
     "start": "node index.js",
     "dev": "node index.js -d",
     "app": "electron .",
-    "build-win": "electron-builder --win --publish=never && npx -y --quiet nexe --build",
+    "build-win": "electron-builder --win --publish=never",
     "build-linux": "electron-builder --linux --publish=never",
     "build-docker": "docker build -t emulatorjs-netplay-server ."
   },
