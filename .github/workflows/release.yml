@@ -74,7 +74,9 @@ jobs:
         run: npm ci
 
       - name: Build Windows
-        run: npm run build-win
+        run: |
+          choco install nasm
+          npm run build-win
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v2
