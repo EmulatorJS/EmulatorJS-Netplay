@@ -70,13 +70,14 @@ jobs:
         with:
           node-version: "latest"
 
+      - name: Set up NASM
+        uses: ilammy/setup-nasm@v1
+
       - name: Install dependencies
         run: npm ci
 
       - name: Build Windows
-        run: |
-          choco install nasm
-          npm run build-win
+        run: npm run build-win
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v2
