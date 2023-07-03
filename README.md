@@ -36,9 +36,9 @@ You can also download the source code and run `npm i` to install packages and th
 
 Go to the releases tab and download the [latest release](https://github.com/EmulatorJS/EmulatorJS-Netplay/releases/tag/latest) for linux and open the AppImage file (you may need to make it executable).
 
-There is a AppImage version and a CLI version.
+There is a AppImage version.
 * The AppImage version is recommended for most users.
-* The CLI version is recommended for advanced users.
+* You can also download the source code and run `npm i` to install packages and then `npm start` to start the server.
 
 ### Docker:
 

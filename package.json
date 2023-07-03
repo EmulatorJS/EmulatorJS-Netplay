@@ -1,22 +1,22 @@
 {
   "name": "emulatorjs-netplay-server",
   "productName": "EmulatorJS Netplay Server",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "main": "app.js",
-  "bin": "server.js",
   "description": "A Netplay Server For EmulatorJS",
   "author": {
     "name": "EmulatorJS",
     "url": "https://github.com/EmulatorJS"
   },
-  "pkg": {
-    "scripts": "**/*.js",
-    "assets": "**/*",
-    "targets": [
-      "latest-linux-x64",
-      "latest-win-x64"
-    ],
-    "outputPath": "dist"
+  "nexe": {
+    "input": "index.js",
+    "output": "dist/emulatorjs-netplay-server.exe",
+    "ico": "src/img/icon.ico",
+    "resources": [
+      "src/**/*",
+      "*.json",
+      "*.js"
+    ]
   },
   "build": {
     "appId": "org.emulatorjs.netplay.server",
@@ -41,8 +41,8 @@
     "start": "node index.js",
     "dev": "node index.js -d",
     "app": "electron .",
-    "build-win": "electron-builder --win --publish=never && pkg ./ --targets latest-win-x64",
-    "build-linux": "electron-builder --linux --publish=never && pkg ./ --targets latest-linux-x64",
+    "build-win": "electron-builder --win --publish=never && nexe --build",
+    "build-linux": "electron-builder --linux --publish=never",
     "build-docker": "docker build -t emulatorjs-netplay-server ."
   },
   "dependencies": {
@@ -51,7 +51,6 @@
   },
   "devDependencies": {
     "electron": "^25.2.0",
-    "electron-builder": "^24.4.0",
-    "pkg": "^5.8.1"
+    "electron-builder": "^24.4.0"
   }
 }
