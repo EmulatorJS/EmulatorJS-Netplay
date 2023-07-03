@@ -115,7 +115,7 @@ function startserver() {
         if(mainserver){
             res.setHeader('Access-Control-Allow-Origin', '*');
             res.setHeader('Content-Type', 'application/json');
-            let args = transformArgs(req.url)
+            let args = netplay.transformArgs(req.url)
             if (!args.game_id || !args.domain || !args.coreVer) {
                 res.end('{}');
                 return;
@@ -171,21 +171,6 @@ function consolelog(message){
     if(dev){
         console.log(message);
     }
-}
-
-function transformArgs(url) {
-    var args = {}
-    var idx = url.indexOf('?')
-    if (idx != -1) {
-        var s = url.slice(idx + 1)
-        var parts = s.split('&')
-        for (var i = 0; i < parts.length; i++) {
-            var p = parts[i]
-            var idx2 = p.indexOf('=')
-            args[decodeURIComponent(p.slice(0, idx2))] = decodeURIComponent(p.slice(idx2 + 1, s.length))
-        }
-    }
-    return args
 }
 
 process.on('message', function(m) {
