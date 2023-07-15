@@ -13,11 +13,10 @@ class Room {
      * @param {string} userid 
      * @param { import("socket.io").Socket } socket
      * @param {any} extra
-     * @param {string} coreVer
      * 
      
      */
-    constructor(domain, game_id, sessionid, name, max, current, password, userid, socket, extra, coreVer) {
+    constructor(domain, game_id, sessionid, name, max, current, password, userid, socket, extra) {
         /** @type string */
         this.domain = domain;
         /** @type number */
@@ -37,8 +36,6 @@ class Room {
         /** @type string */
 
         this.id = domain + ':' + game_id + ':' + sessionid;
-        /** @type number */
-        this.coreVer = parseInt(coreVer);
 
         // define user type
 

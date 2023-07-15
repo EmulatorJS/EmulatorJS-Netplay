@@ -9,7 +9,6 @@ let interfaces = os.networkInterfaces();
 let mainserver = true;
 let addresses = [];
 let nofusers = {num: 3};
-let rooms = {room: []};
 let port;
 let password;
 let dev;
@@ -116,24 +115,21 @@ function startserver() {
             res.setHeader('Access-Control-Allow-Origin', '*');
             res.setHeader('Content-Type', 'application/json');
             let args = netplay.transformArgs(req.url)
-            if (!args.game_id || !args.domain || !args.coreVer) {
+            if (!args.game_id || !args.domain) {
                 res.end('{}');
                 return;
             }
             args.game_id = parseInt(args.game_id);
-            args.coreVer = parseInt(args.coreVer);
             let rv = {};
-            for (let i=0; i<rooms.room.length; i++) {
-                if (rooms.room[i].domain !== args.domain ||
-                    rooms.room[i].game_id !== args.game_id ||
-                    rooms.room[i].coreVer !== args.coreVer) continue;
-                rv[rooms.room[i].sessionid] = {
-                    owner_name: rooms.room[i].owner.extra.name,
-                    room_name: rooms.room[i].name,
-                    country: 'US',
-                    max: rooms.room[i].max,
-                    current: rooms.room[i].current,
-                    password: (rooms.room[i].password.trim() ? 1 : 0)
+            for (let i=0; i<global.rooms.length; i++) {
+                if (global.rooms[i].domain !== args.domain ||
+                    global.rooms[i].game_id !== args.game_id) continue;
+                rv[global.rooms[i].sessionid] = {
+                    owner_name: global.rooms[i].owner.extra.name,
+                    room_name: global.rooms[i].name,
+                    max: global.rooms[i].max,
+                    current: global.rooms[i].current,
+                    password: (global.rooms[i].password.trim() ? 1 : 0)
                 }
             }
             res.end(JSON.stringify(rv));
