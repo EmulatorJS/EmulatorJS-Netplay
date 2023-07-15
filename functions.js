@@ -93,6 +93,16 @@ function start(io, rooms, numusers, devv) {
         let args = transformArgs(url);
         let extraData = JSON.parse(args.extra);
         let room = null;
+        
+        socket.on('open-room', function(data, cb) {
+            room = new Room(data.extra.domain, data.extra.game_id, args.sessionid, data.extra.room_name, args.maxParticipantsAllowed, 1, data.password.trim(), args.userid, socket, data.extra, args.coreVer);
+            global.rooms.push(room);
+            extraData = data.extra;
+            socket.emit('extra-data-updated', args.userid, extraData);
+            socket.join(room.id);
+            
+        })
+        
 
     });
 
