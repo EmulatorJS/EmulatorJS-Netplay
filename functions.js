@@ -127,7 +127,7 @@ function start(io, rooms, numusers, devv) {
         })
         socket.on('open-room', function(data, cb) {
             if (getRoom(data.extra.domain, data.extra.game_id, data.extra.sessionid) !== null) {
-                cb(true);
+                cb(true, "ROOM_ALREADY_EXISTS");
                 return;
             }
             room = new Room(data.extra.domain, data.extra.game_id, data.extra.sessionid, data.extra.room_name, data.maxPlayers, 1, data.password.trim(), data.extra.userid, socket, data.extra);
@@ -156,8 +156,6 @@ function start(io, rooms, numusers, devv) {
         socket.on("data-message", (data) => {
             socket.to(room.id).emit("data-message", data);
         })
-        
-
     });
 
     function updateusers(){
