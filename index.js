@@ -1,4 +1,9 @@
-const argv = require('minimist')(process.argv.slice(2));
+let argv;
+try {
+    argv = require('minimist')(process.argv.slice(2));
+} catch(e) {
+    argv = {};
+}
 const path = require('path');
 const cp = require('child_process');
 const config = require('./config.json');
@@ -8,25 +13,27 @@ let dev;
 
 if (process.env.NETPLAY_PASSWORD) {
     password = process.env.NETPLAY_PASSWORD;
-}else if(argv.a){
+} else if (argv.a){
     password = argv.a;
-}else{
+} else {
     password = config.password;
 }
 
 if (process.env.NETPLAY_PORT) {
     port = process.env.NETPLAY_PORT;
-}else if(argv.p){
+} else if (process.env.PORT) {
+    port = process.env.PORT;
+} else if (argv.p){
     port = argv.p;
-}else{
+} else {
     port = config.port;
 }
 
 if (process.env.NETPLAY_DEV) {
     dev = process.env.NETPLAY_DEV;
-}else if(argv.d){
+} else if (argv.d){
     dev = true;
-}else{
+} else {
     dev = config.dev;
 }
 

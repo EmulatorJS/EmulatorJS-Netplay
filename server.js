@@ -152,7 +152,8 @@ function startnetplay(){
             origin: "*",
             methods: ["GET", "POST"],
             credentials: true
-        }
+        },
+        maxHttpBufferSize: 1e8
     });
     netplay.start(io, rooms, nofusers, dev);
 }
