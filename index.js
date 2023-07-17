@@ -37,7 +37,7 @@ if (process.env.NETPLAY_DEV) {
     dev = config.dev;
 }
 
-if(argv.h || argv._.includes('help')){
+if (argv.h || (argv._ && argv._.includes('help'))) {
     console.log("Usage: npm start -- [-p port] [-a password]");
     process.exit();
 }
