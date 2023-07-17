@@ -76,11 +76,35 @@ class Room {
      * @property {any} extra 
      */
     addUser(user) {
-        this.users.forEach(userr => {
-            user.socket.emit('user-connected', userr.userid);
-        })
         this.users.push(user);
         this.current++;
+        this.users.forEach(userr => {
+            userr.socket.emit('users-updated', this.getUsers());
+        })
+    }
+    getUsers() {
+        const rv = {};
+        for (let i=0; i<this.users.length; i++) {
+            rv[this.users[i].extra.userid] = this.users[i].extra;
+        }
+        return rv;
+    }
+    terminate() {
+        for (let i=0; i<this.users.length; i++) {
+            this.users[i].socket.disconnect();
+        }
+    }
+    userLeft(userid) {
+        this.current--;
+        for (let i=0; i<this.users.length; i++) {
+            if (this.users[i].extra.userid === userid) {
+                this.users.splice(i, 1);
+                break;
+            }
+        }
+        this.users.forEach(userr => {
+            userr.socket.emit('users-updated', this.getUsers());
+        })
     }
 }
 
@@ -90,17 +114,47 @@ function start(io, rooms, numusers, devv) {
     io.on('connection', (socket) => {
         updateusers();
         let url = socket.handshake.url;
-        let args = transformArgs(url);
-        let extraData = JSON.parse(args.extra);
         let room = null;
+        let extraData;
         
+        socket.on("disconnect", () => {
+            if (extraData.userid === room.owner.userid) {
+                room.terminate();
+                global.rooms.splice(global.rooms.indexOf(room));
+            } else {
+                room.userLeft(extraData.userid);
+            }
+        })
         socket.on('open-room', function(data, cb) {
-            room = new Room(data.extra.domain, data.extra.game_id, args.sessionid, data.extra.room_name, args.maxParticipantsAllowed, 1, data.password.trim(), args.userid, socket, data.extra, args.coreVer);
+            if (getRoom(data.extra.domain, data.extra.game_id, data.extra.sessionid) !== null) {
+                cb(true);
+                return;
+            }
+            room = new Room(data.extra.domain, data.extra.game_id, data.extra.sessionid, data.extra.room_name, data.maxPlayers, 1, data.password.trim(), data.extra.userid, socket, data.extra);
             global.rooms.push(room);
             extraData = data.extra;
-            socket.emit('extra-data-updated', args.userid, extraData);
             socket.join(room.id);
+            cb(false);
+            //console.log(room);
             
+        })
+        socket.on('join-room', function(data, cb) {
+            room = getRoom(data.extra.domain, data.extra.game_id, data.extra.sessionid);
+            if (room === null || (room && room.current >= room.max)) {
+                cb(true, (room === null) ? "ROOM_NOT_FOUND" : "ROOM_FULL");
+                return;
+            }
+            extraData = data.extra;
+            room.addUser({
+                socket: socket,
+                extra: extraData
+            });
+            socket.join(room.id);
+            cb(false, room.getUsers());
+            
+        })
+        socket.on("data-message", (data) => {
+            socket.to(room.id).emit("data-message", data);
         })
         
 
