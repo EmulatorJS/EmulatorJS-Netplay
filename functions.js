@@ -118,12 +118,14 @@ function start(io, rooms, numusers, devv) {
         let extraData;
         
         socket.on("disconnect", () => {
+            if (room === null) return;
             if (extraData.userid === room.owner.userid) {
                 room.terminate();
                 global.rooms.splice(global.rooms.indexOf(room));
             } else {
                 room.userLeft(extraData.userid);
             }
+            room = null;
         })
         socket.on('open-room', function(data, cb) {
             if (getRoom(data.extra.domain, data.extra.game_id, data.extra.sessionid) !== null) {
@@ -154,6 +156,7 @@ function start(io, rooms, numusers, devv) {
             
         })
         socket.on("data-message", (data) => {
+            if (room === null) return;
             socket.to(room.id).emit("data-message", data);
         })
     });
