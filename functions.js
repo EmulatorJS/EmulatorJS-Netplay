@@ -118,6 +118,7 @@ function start(io, rooms, numusers, devv) {
         let extraData;
         
         socket.on("disconnect", () => {
+            updateusers();
             if (room === null) return;
             if (extraData.userid === room.owner.userid) {
                 room.terminate();

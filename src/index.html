@@ -146,35 +146,25 @@
 
             (function() {
                 check();
-                status().then(info => {
-                    document.getElementById('info').innerHTML = "Running server on port " + (info.port || 3000) + " with password " + info.password;
-                });
-                interface().then(address => {
-                    address.interfaces.push(window.location.protocol+"//"+window.location.hostname+':'+window.location.port+'/');
+                api("interface").then(address => {
+                    if(window.location.port != ""){
+                        address.interfaces.push(window.location.protocol+"//"+window.location.hostname+':'+window.location.port+'/');
+                    }else{
+                        address.interfaces.push(window.location.protocol+"//"+window.location.hostname+'/');
+                    }
                     address.interfaces = [...new Set(address.interfaces)];
                     address.interfaces.forEach(address => {
                         document.getElementById('urls').innerHTML += '<li><a href="'+address+'" target="_blank" onclick="window.api.openExternal(this.href);event.preventDefault()">'+address+'</a></li>';
                     });
                 });
-                checkforusers();
+                statuscheck();
             })();
-
-            function status() {
-                return fetch('/status', {
+            function api(type) {
+                return fetch('/api', {
                     method: 'POST',
-                    headers: {
-                    'Content-Type': 'application/json'
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    return data;
-                });
-            }
-
-            function interface() {
-                return fetch('/interface', {
-                    method: 'POST',
+                    body: JSON.stringify({
+                        function: type,
+                    }),
                     headers: {
                     'Content-Type': 'application/json'
                     }
@@ -185,16 +175,10 @@
                 });
             }
             function check(){
-                fetch('/check', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                }).then(response => response.json())
-                    .then(data => {
-                    if(data == true){
+                api("check").then(status => {
+                    if(status == true){
                         startstop.innerText = 'Stop';
-                    }else if(data == false){
+                    }else if(status == false){
                         startstop.innerText = 'Start';
                     }
                     update();
@@ -220,16 +204,7 @@
                 update();
             }
             function startstopserver(option){
-                fetch('/startstop', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        function: option,
-                    })
-                }).then(response => response.json())
-                    .then(data => {
+                api(option).then(data => {
                     if(option == "start"){
                         if(data == true){
                             startstop.innerText = 'Stop'; 
@@ -249,20 +224,19 @@
                 });
             }
             setInterval(function(){ 
-                checkforusers();
+                statuscheck();
             }, 5000);
-            function checkforusers(){
-                fetch('/numusers', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
+            function statuscheck(){
+                api("status").then(data => {
+                    if(data.status == true){
+                        startstop.innerText = 'Stop';
+                    }else if(data.status == false){
+                        startstop.innerText = 'Start';
                     }
-                }).then(response => response.json())
-                    .then(data => {
-                    data = data.users;
-                    document.getElementById('nuser').innerHTML = "Users connected: "+data;
-                });	
+                    document.getElementById('nuser').innerHTML = "Users connected: "+data.nofusers;
+                    document.getElementById('info').innerHTML = "Running server on port " + (data.port || 3000) + " with password " + data.password;
+                    update();
+                });
             }
         </script>
     </body>

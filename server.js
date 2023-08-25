@@ -5,10 +5,11 @@ const path = require('path');
 const app = express();
 const os = require('os');
 const netplay = require("./functions.js");
+const e = require('express');
 let interfaces = os.networkInterfaces();
 let mainserver = true;
 let addresses = [];
-let nofusers = {num: 3};
+let nofusers = {num: 0};
 let port;
 let password;
 let dev;
@@ -43,7 +44,7 @@ function startserver() {
             res.sendStatus(401)
         }
     });
-    app.post('/status', (req, res) => {
+    app.post('/api', (req, res) => {
         const reject = () => {
             res.setHeader('www-authenticate', 'Basic')
             res.sendStatus(401)
@@ -51,60 +52,28 @@ function startserver() {
         if (!checkAuth(req.headers.authorization, password)) {
             return reject();
         }
-        res.end('{ "port": ' + port + ', "password": "' + password + '", "nofusers": ' + nofusers.num + ' }');
-    });
-    app.post('/interface', (req, res) => {
-        const reject = () => {
-            res.setHeader('www-authenticate', 'Basic')
-            res.sendStatus(401)
-        }
-        if (!checkAuth(req.headers.authorization, password)) {
-            return reject();
-        }
-        for (let k in interfaces) {
-            for (let k2 in interfaces[k]) {
-                let address = interfaces[k][k2];
-                if (address.family === 'IPv4') {
-                    addresses.push("http://"+address.address+":"+port+"/");
+        if (req.body.function === "status") {
+            res.end('{ "status": ' + mainserver.toString() + ', "port": ' + port + ', "password": "' + password + '", "nofusers": ' + nofusers.num + ' }'); 
+        }else if(req.body.function === "interface"){
+            for (let k in interfaces) {
+                for (let k2 in interfaces[k]) {
+                    let address = interfaces[k][k2];
+                    if (address.family === 'IPv4') {
+                        addresses.push("http://"+address.address+":"+port+"/");
+                    }
                 }
             }
-        }
-        addresses.push("http://localhost:"+port+"/");
-        res.end('{ "interfaces": ' + JSON.stringify(addresses) + ' }');
-    });
-    app.post('/check', (req, res) => {
-        const reject = () => {
-            res.setHeader('www-authenticate', 'Basic')
-            res.sendStatus(401)
-        }
-        if (!checkAuth(req.headers.authorization, password)) {
-            return reject();
-        }
-        res.end(mainserver.toString());
-    });
-    app.post('/numusers', (req, res) => {
-        const reject = () => {
-            res.setHeader('www-authenticate', 'Basic')
-            res.sendStatus(401)
-        }
-        if (!checkAuth(req.headers.authorization, password)) {
-            return reject();
-        }
-        res.end('{ "users": ' + nofusers.num + " }");
-    });
-    app.post('/startstop', (req, res) => {
-        const reject = () => {
-            res.setHeader('www-authenticate', 'Basic');
-            res.sendStatus(401);
-        }
-        if (!checkAuth(req.headers.authorization, password)) {
-            return reject();
-        }
-        if (req.body.function === "stop") {
+            addresses.push("http://localhost:"+port+"/");
+            res.end('{ "interfaces": ' + JSON.stringify(addresses) + ' }');
+        }else if(req.body.function === "check"){
+            res.end(mainserver.toString());
+        }else if(req.body.function === "nofusers"){
+            res.end('{ "users": ' + nofusers.num + " }");
+        }else if(req.body.function === "stop"){
             mainserver = false;
             res.end('true');
             stopnetplay();
-        } else {
+        }else if(req.body.function === "start"){
             mainserver = true;
             res.end('true');
             startnetplay();
