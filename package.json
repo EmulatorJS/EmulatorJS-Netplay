@@ -1,7 +1,7 @@
 {
   "name": "emulatorjs-netplay-server",
   "productName": "EmulatorJS Netplay Server",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "main": "app.js",
   "description": "A Netplay Server For EmulatorJS",
   "author": {
