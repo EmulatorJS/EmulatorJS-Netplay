@@ -1,0 +1,1 @@
+const peer = new Peer();
