@@ -6,7 +6,7 @@
   "scripts": {
     "build:server": "tsc",
     "dev:server": "esno --watch server/index.ts",
-    "dev": "esno --watch client/index.ts"
+    "dev": "esno --watch server/index.ts"
   },
   "keywords": [],
   "author": "",
