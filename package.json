@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build:server": "tsc"
+    "build:server": "tsc",
+    "dev:server": "esno --watch server/index.ts",
+    "dev": "esno --watch client/index.ts",
   },
   "keywords": [],
   "author": "",
