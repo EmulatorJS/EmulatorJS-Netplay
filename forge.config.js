@@ -31,6 +31,7 @@ module.exports = {
                     homepage: 'https://emulatorjs.org',
                     icon: './icon.png',
                     bin: 'EmulatorJS-Netplay',
+                    description: 'EmulatorJS Netplay',
                 },
                 mimeType: ['x-scheme-handler/emulatorjs-netplay']
             }
