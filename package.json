@@ -8,7 +8,7 @@
   },
   "scripts": {
     "build:ts": "tsc",
-    "dev:app": "pnpm run build:ts & electron-forge start",
+    "dev:app": "pnpm run build:ts && electron-forge start",
     "dev:server": "esno --watch server/index.ts",
     "dev": "pnpm run dev:server & pnpm run dev:app"
   },
