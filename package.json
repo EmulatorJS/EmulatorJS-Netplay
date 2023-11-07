@@ -11,9 +11,9 @@
     "dev:app": "pnpm run build:ts && electron-forge start",
     "dev:server": "esno --watch server/index.ts",
     "dev": "pnpm run dev:server & pnpm run dev:app",
-    "make": "electron-forge make",
-    "package": "electron-forge package",
-    "publish": "electron-forge publish"
+    "make": "tsc && electron-forge make",
+    "package": "tsc && electron-forge package",
+    "publish": "tsc && electron-forge publish"
   },
   "keywords": [],
   "author": "",
