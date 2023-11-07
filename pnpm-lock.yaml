@@ -28,6 +28,9 @@ devDependencies:
   '@electron-forge/maker-dmg':
     specifier: ^6.4.2
     version: 6.4.2
+  '@electron-forge/maker-rpm':
+    specifier: ^6.4.2
+    version: 6.4.2
   '@electron-forge/maker-squirrel':
     specifier: ^6.4.2
     version: 6.4.2
@@ -240,6 +243,20 @@ packages:
       fs-extra: 10.1.0
     optionalDependencies:
       electron-installer-dmg: 4.0.0
+    transitivePeerDependencies:
+      - bluebird
+      - enquirer
+      - supports-color
+    dev: true
+
+  /@electron-forge/maker-rpm@6.4.2:
+    resolution: {integrity: sha512-+hfbY5pYbAer0y07OtOzVgVBHoTRmemqqZ//T0mKJpyK2ThHKGTvyW8FFlr5jlQs5LoDCM2WHKE8oGtRhivsMg==}
+    engines: {node: '>= 14.17.5'}
+    dependencies:
+      '@electron-forge/maker-base': 6.4.2
+      '@electron-forge/shared-types': 6.4.2
+    optionalDependencies:
+      electron-installer-redhat: 3.4.0
     transitivePeerDependencies:
       - bluebird
       - enquirer
@@ -1976,6 +1993,25 @@ packages:
       minimist: 1.2.8
     optionalDependencies:
       appdmg: 0.6.6
+    transitivePeerDependencies:
+      - supports-color
+    dev: true
+    optional: true
+
+  /electron-installer-redhat@3.4.0:
+    resolution: {integrity: sha512-gEISr3U32Sgtj+fjxUAlSDo3wyGGq6OBx7rF5UdpIgbnpUvMN4W5uYb0ThpnAZ42VEJh/3aODQXHbFS4f5J3Iw==}
+    engines: {node: '>= 10.0.0'}
+    os: [darwin, linux]
+    hasBin: true
+    requiresBuild: true
+    dependencies:
+      '@malept/cross-spawn-promise': 1.1.1
+      debug: 4.3.4
+      electron-installer-common: 0.10.3
+      fs-extra: 9.1.0
+      lodash: 4.17.21
+      word-wrap: 1.2.5
+      yargs: 16.2.0
     transitivePeerDependencies:
       - supports-color
     dev: true
@@ -4679,6 +4715,7 @@ packages:
 
   /wrappy@1.0.2:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
+    requiresBuild: true
     dev: true
 
   /ws@8.14.2:
