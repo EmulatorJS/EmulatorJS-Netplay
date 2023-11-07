@@ -1,4 +1,4 @@
-name: Run commands on different operating systems
+name: Build and Release
 on:
   push:
     tags:
@@ -6,128 +6,64 @@ on:
   workflow_dispatch:
 
 jobs: 
-  version:
-    name: Get Version
+  release:
+    name: Release Pushed Tag
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v3
-      - name: Version
-        id: version
+      - name: Setup
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.event.ref }}
         run: |
-          version=$(echo "${GITHUB_REF}" | sed -n 's/^refs\/tags\/v//p')
-          echo version=${version} >> $GITHUB_OUTPUT
-          
+          tag=${ref##*/}
+          gh release create "$tag" -p --repo="$GITHUB_REPOSITORY" --latest --title="${GITHUB_REPOSITORY#*/} ${tag#v}" --generate-notes
+
   build-linux:
-    needs: [version]
     name: Build latest push on ubuntu
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
-          node-version: 'latest'
+          node-version: '19'
       - name: Install dependencies
-        run: npm i
+        run: |
+          npm i
       - name: Install build files
         run: sudo apt update && sudo apt install elfutils && sudo apt install rpm
-      - name: Upload Linux artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: linux-artifacts
-          path: |
-            dist/*.AppImage
-            dist/*.zip
+      - name: Build and Publish
+        run: npm run publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
   build-macos:
-    needs: [version]
-    name: Build latest push on macos
     runs-on: macOS-latest
+    name: Build latest push on macos
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
-          node-version: 'latest'
+          node-version: '19'
       - name: Install dependencies
         run: npm i
-      - name: Upload MacOS artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: macos-artifacts
-          path: |
-            dist/*.AppImage
-            dist/*.zip
-
+      - name: Build and publish
+        run: npm run publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  
   build-windows:
-     needs: [version]
      name: Build latest push on Windows
      runs-on: windows-latest
      steps:
        - uses: actions/checkout@v3
        - uses: actions/setup-node@v3
          with:
-           node-version": 'latest'
+           node-version": '19'
        - name: Install dependencies
          shell: bash
          run: npm i
-       - name: Upload Windows artifacts
-         uses: actions/upload-artifact@v2
-         with:
-           name: windows-artifacts
-           path: |
-             dist/*.exe
-             dist/*.zip
-           
-  make-release:
-    needs: [version, build-linux, build-windows, build-macos]
-    name: Create Release
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      - name: Download windows artifacts
-        uses: actions/download-artifact@v2
-        with:
-          name: windows-artifacts
-          path: dist/
-
-      - name: Download linux artifacts
-        uses: actions/download-artifact@v2
-        with:
-          name: linux-artifacts
-          path: dist/
-
-      - name: Rename Files
-        run: |
-          mv "dist/emulatorjs-netplay-server-${{ needs.check-version.outputs.version }}.zip" "dist/EmulatorJS Netplay Server-linux-${{ needs.check-version.outputs.version }}.zip"
-          mv "dist/EmulatorJS Netplay Server-${{ needs.check-version.outputs.version }}.AppImage" "dist/EmulatorJS Netplay Server App-linux-${{ needs.check-version.outputs.version }}.AppImage"
-          mv "dist/EmulatorJS Netplay Server ${{ needs.check-version.outputs.version }}.exe" "dist/EmulatorJS Netplay Server App-windows-${{ needs.check-version.outputs.version }}.exe"
-          mv "dist/EmulatorJS Netplay Server-${{ needs.check-version.outputs.version }}-win.zip" "dist/EmulatorJS Netplay Server-windows-${{ needs.check-version.outputs.version }}.zip"
-      
-      - name: Generate checksum
-        uses: jmgilman/actions-generate-checksum@v1
-        with:
-          patterns: |
-            dist/*.zip
-            dist/*.exe
-            dist/*.AppImage
-
-      - name: Create Release & Make Notes & Upload Assets
-        id: create_release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release create "v${{ needs.check-version.outputs.version }}" --title "v${{ needs.check-version.outputs.version }}" --generate-notes
-          gh release upload "v${{ needs.check-version.outputs.version }}" "dist/EmulatorJS Netplay Server-linux-${{ needs.check-version.outputs.version }}.zip#EmulatorJS Netplay Server-linux-${{ needs.check-version.outputs.version }}.zip"
-          gh release upload "v${{ needs.check-version.outputs.version }}" "dist/EmulatorJS Netplay Server App-linux-${{ needs.check-version.outputs.version }}.AppImage#EmulatorJS Netplay Server App-linux-${{ needs.check-version.outputs.version }}.AppImage"
-          gh release upload "v${{ needs.check-version.outputs.version }}" "dist/EmulatorJS Netplay Server-windows-${{ needs.check-version.outputs.version }}.zip#EmulatorJS Netplay Server-windows-${{ needs.check-version.outputs.version }}.zip"
-          gh release upload "v${{ needs.check-version.outputs.version }}" "dist/EmulatorJS Netplay Server App-windows-${{ needs.check-version.outputs.version }}.exe#EmulatorJS Netplay Server App-windows-${{ needs.check-version.outputs.version }}.exe"
-          gh release upload "v${{ needs.check-version.outputs.version }}" "checksum.txt#checksum-256.txt"
-
-      - name: Purge artifacts
-        uses: kolpav/purge-artifacts-action@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          expire-in: 0      
-            
+       - name: Build and publish
+         run: npm run publish
+         env:
+           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
