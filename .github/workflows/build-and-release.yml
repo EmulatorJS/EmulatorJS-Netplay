@@ -79,7 +79,7 @@ jobs:
              dist/*.zip
            
   make-release:
-    needs: [version, build-linux, build-windows, build-macos, build-aur]
+    needs: [version, build-linux, build-windows, build-macos]
     name: Create Release
     runs-on: ubuntu-latest
     steps:
