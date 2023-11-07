@@ -14,6 +14,13 @@ server.listen(3001, () => {
     console.log('Server is running');
 });
 
+//@ts-ignore Process IS defined
+process.on('SIGINT', killServer);
+//@ts-ignore Process IS defined
+process.on('SIGTERM', killServer);
+//@ts-ignore Process IS defined
+process.on('SIGQUIT', killServer);
+
 function killServer() {
     //@ts-ignore server.close() exists
     server.close();
