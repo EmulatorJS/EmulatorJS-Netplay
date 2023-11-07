@@ -1,24 +1,23 @@
-name: Build App for Release
+name: Run commands on different operating systems
 on:
   push:
     tags:
-      - 'v*'
-  workflow_dispatch:
+      - v*
 
-jobs:
+jobs: 
   version:
-    name: Get Version 
+    name: Get Version
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.set_version.outputs.version }}
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v3
-      - name: Version 
-        id: version 
+      - name: Version
+        id: version
         run: |
           version=$(echo "${GITHUB_REF}" | sed -n 's/^refs\/tags\/v//p')
-          echo version=${version} >> $GITHUB_OUTPUT 
-
+          echo version=${version} >> $GITHUB_OUTPUT
+          
   build-linux:
     needs: [version]
     name: Build latest push on ubuntu
@@ -39,7 +38,7 @@ jobs:
           path: |
             dist/*.AppImage
             dist/*.zip
-
+          
   build-macos:
     needs: [version]
     name: Build latest push on macos
@@ -78,9 +77,29 @@ jobs:
            path: |
              dist/*.exe
              dist/*.zip
-
+           
+  build-aur:
+     needs: [version]
+     name: Build AUR package
+     runs-on: ubuntu-latest
+     steps:
+       - name: Checkout code
+         uses: actions/checkout@v3
+       - name: Update Version
+         run: sed -i "s/pkgver=.*/pkgver=${{ needs.version.version.outputs.version }}/" PKGBUILD
+       - name: Push to the AUR
+         uses: KSXGitHub/github-actions-deploy-aur@v2.7.0
+         with:
+          pkgname: flashplayer
+          pkgbuild: ./PKGBUILD
+          commit_username: ${{ secrets.AUR_USERNAME }}
+          commit_email: ${{ secrets.AUR_EMAIL }}
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          commit_message: Update AUR package
+          ssh_keyscan_types: rsa
+    
   make-release:
-    needs: [version, build-linux, build-windows, build-macos]
+    needs: [version, build-linux, build-windows, build-macos, build-aur]
     name: Create Release
     runs-on: ubuntu-latest
     steps:
@@ -124,3 +143,10 @@ jobs:
           gh release upload "v${{ needs.check-version.outputs.version }}" "dist/EmulatorJS Netplay Server-windows-${{ needs.check-version.outputs.version }}.zip#EmulatorJS Netplay Server-windows-${{ needs.check-version.outputs.version }}.zip"
           gh release upload "v${{ needs.check-version.outputs.version }}" "dist/EmulatorJS Netplay Server App-windows-${{ needs.check-version.outputs.version }}.exe#EmulatorJS Netplay Server App-windows-${{ needs.check-version.outputs.version }}.exe"
           gh release upload "v${{ needs.check-version.outputs.version }}" "checksum.txt#checksum-256.txt"
+
+      - name: Purge artifacts
+        uses: kolpav/purge-artifacts-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          expire-in: 0      
+            
