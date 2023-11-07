@@ -2,11 +2,15 @@
   "name": "netplay",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/app/app.js",
+  "bin": {
+      "EmulatorJS-Netplay": "./dist/app/app.js"
+  },
   "scripts": {
-    "build:server": "tsc",
+    "build:ts": "tsc",
+    "dev:app": "pnpm run build:ts & electron-forge start",
     "dev:server": "esno --watch server/index.ts",
-    "dev": "esno --watch server/index.ts"
+    "dev": "pnpm run dev:server & pnpm run dev:app"
   },
   "keywords": [],
   "author": "",
@@ -18,8 +22,16 @@
     "peerjs": "^1.5.1"
   },
   "devDependencies": {
+    "@electron-forge/cli": "^6.4.2",
+    "@electron-forge/maker-deb": "^6.4.2",
+    "@electron-forge/maker-dmg": "^6.4.2",
+    "@electron-forge/maker-squirrel": "^6.4.2",
+    "@electron-forge/maker-zip": "^6.4.2",
+    "@rabbitholesyndrome/electron-forge-maker-portable": "^0.1.1",
+    "@reforged/maker-appimage": "^3.3.1",
     "@types/express": "^4.17.20",
     "@types/node": "^20.8.10",
+    "electron": "^27.0.3",
     "esno": "^0.17.0",
     "typescript": "^5.2.2"
   }
