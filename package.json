@@ -8,12 +8,11 @@
   },
   "scripts": {
     "build:ts": "tsc",
-    "dev:app": "pnpm run build:ts && electron-forge start",
     "dev:server": "esno --watch server/index.ts",
-    "dev": "pnpm run dev:server & pnpm run dev:app",
-    "make": "tsc && electron-forge make",
-    "package": "tsc && electron-forge package",
-    "publish": "tsc && electron-forge publish"
+    "dev": "yarn run dev:server & yarn run dev:app",
+    "make": "electron-forge make",
+    "package": "electron-forge package",
+    "publish": "electron-forge publish"
   },
   "keywords": [],
   "author": "",

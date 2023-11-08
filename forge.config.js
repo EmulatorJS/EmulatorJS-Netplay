@@ -29,7 +29,7 @@ module.exports = {
                     productName: 'EmulatorJS-Netplay',
                     maintainer: 'EmulatorJS',
                     homepage: 'https://emulatorjs.org',
-                    icon: './icon.png',
+                    icon: './static/logo-light.png',
                     bin: 'EmulatorJS-Netplay',
                     description: 'EmulatorJS Netplay',
                 },
@@ -50,7 +50,7 @@ module.exports = {
             name: '@rabbitholesyndrome/electron-forge-maker-portable',
             config: {
                 appId: "com.emulatorjs.netplay",
-                icon: './icon.ico',
+                icon: './static/icon.ico',
             },
         },
         {
@@ -65,7 +65,7 @@ module.exports = {
                         "Game",
                         "Emulator"
                     ],
-                    icon: "./icon.png",
+                    icon: "./static/logo-light.png",
                     description: "EmulatorJS Netplay",
                     AppImageKitRelease: "continuous",
                 },
