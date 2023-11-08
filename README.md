@@ -1,13 +1,13 @@
 # New Netplay (unfinished)
 
 ```bash
-npm i -g pnpm
+npm i -g yarn
 ```
 
 ```bash
-pnpm i
+yarn i
 ```
 
 ```bash
-pnpm dev
+yarn dev
 ```
