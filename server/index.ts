@@ -8,7 +8,7 @@ const server: Express = express();
 server.use(authentication);
 createPeerServer(server, '/webrtc');
 servePeerLib(server);
-server.use(express.static('static'), { index: 'index.html' });
+server.use(express.static('static', { index: 'index.html' }));
 
 const port = process.env.PORT || 3000;
 
