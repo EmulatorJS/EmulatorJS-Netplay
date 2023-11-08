@@ -1,0 +1,107 @@
+body {
+    background-color: black;
+    color: white;
+}
+
+.loading-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    color: white;
+    text-align: center;
+    opacity: 1;
+    transition: opacity 1s ease-in-out;
+    z-index: 1;
+}
+
+.content {
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+    z-index: 2;
+    text-align: center;
+}
+
+.loading-logo {
+    width: 350px;
+    height: 350px;
+    filter: drop-shadow(0 0 20px white);
+}
+
+.logo {
+    width: 200px;
+    height: 200px;
+    filter: drop-shadow(0 0 10px white);
+}
+
+.loading-text {
+    font-size: 24px;
+    filter: drop-shadow(0 0 10px white);
+}
+
+.button {
+    background-color: #0098C5;
+    color: #000;
+    font-size: 18px;
+    border: none;
+    border-radius: 5px;
+    padding: 5px 10px;
+    cursor: pointer;
+}
+
+.button:hover {
+    background-color: #006888;
+}
+
+#status,
+#nuser {
+    margin: 10px 0;
+}
+
+.url-list {
+    padding: 0;
+    display: inline-block;
+    text-align: left;
+    margin: 0;
+}
+
+.url-list li {
+    margin-bottom: 2px;
+}
+
+a {
+    color: #0098C5;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+* {
+    scrollbar-width: auto;
+    scrollbar-color: #0097c5 #000000;
+}
+
+*::-webkit-scrollbar {
+    width: 10px;
+}
+
+*::-webkit-scrollbar-track {
+    background: #000000;
+}
+
+*::-webkit-scrollbar-thumb {
+    background-color: #0097c5;
+    border-radius: 10px;
+    border: 0.5px solid #006888;
+}

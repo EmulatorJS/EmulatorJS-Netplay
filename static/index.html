@@ -1,10 +1,27 @@
-<!DOCTYPE>
-<html lang="en">
+<!DOCTYPE html>
+<html>
     <head>
-        <script src="/lib/peerjs/peerjs.min.js" defer></script>
-        <script src="/client.js" defer></script>
+        <title>EmulatorJS | Netplay Server</title>
+        <link rel="icon" type="image/png" href="/icon.ico">
+        <link rel="stylesheet" href="style.css">
     </head>
     <body>
-        <h1> Hello World </h1>
+        <div id="loading" class="loading-screen">
+            <img src="/logo-light.png" alt="Logo" class="loading-logo">
+            <p class="loading-text">Loading Server...</p>
+        </div>
+
+        <div id="content" class="content">
+            <h1>EmulatorJS Netplay Server</h1>
+            <img src="/logo-light.png" alt="Logo" class="logo">
+            <p id="info">Server info</p>
+            <button onclick="server()" id="server" class="button">Start Server</button>
+            <p id="status"></p>
+            <p id="nuser"></p>
+            <p>URL's to use with EmulatorJS Netplay: <ul id="urls" class="url-list"></ul></p>
+            <p><a href="https://github.com/EmulatorJS/EmulatorJS-Netplay" target="_blank" class="github-link">View on GitHub</a></p>
+            <p>Licensed under the Apache License 2.0 - Read the license <a href="https://github.com/EmulatorJS/EmulatorJS-Netplay/blob/main/LICENSE" target="_blank" class="license-link">here</a></p>
+            <br>
+        </div>
     </body>
 </html>
