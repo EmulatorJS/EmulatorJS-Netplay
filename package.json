@@ -1,21 +1,40 @@
 {
   "name": "netplay",
   "version": "1.0.0",
-  "description": "",
+  "description": "yes",
   "main": "dist/app/app.js",
-  "bin": {
-    "EmulatorJS-Netplay": "./dist/app/app.js"
+  "author": {
+    "name": "EmulatorJS",
+    "url": "https://github.com/emulatorjs"
+  },
+  "build": {
+    "appId": "org.emulatorjs.netplay.server",
+    "linux": {
+      "target": [
+        "appimage",
+        "zip"
+      ],
+      "description": "A Netplay Server For EmulatorJS",
+      "category": "Network;Game",
+      "icon": "static/logo-light.png"
+    },
+    "win": {
+      "target": [
+        "zip",
+        "portable"
+      ],
+      "icon": "static/icon.ico"
+    }
   },
   "scripts": {
     "build:ts": "tsc",
     "dev:server": "esno --watch server/index.ts",
-    "dev": "yarn run dev:server & yarn run dev:app",
-    "make": "electron-forge make",
-    "package": "electron-forge package",
-    "publish": "electron-forge publish"
+    "dev:app": "pnpm build:ts && electron ./dist/app/app.js",
+    "dev": "pnpm dev:server",
+    "build:app:windows": "pnpm build:ts && electron-builder --win --publish=never",
+    "build:app:linux": "pnpm build:ts && electron-builder --linux --publish=never"
   },
   "keywords": [],
-  "author": "",
   "license": "ISC",
   "dependencies": {
     "esbuild": "^0.19.5",
@@ -24,17 +43,10 @@
     "peerjs": "^1.5.1"
   },
   "devDependencies": {
-    "@electron-forge/cli": "^6.4.2",
-    "@electron-forge/maker-deb": "^6.4.2",
-    "@electron-forge/maker-dmg": "^6.4.2",
-    "@electron-forge/maker-rpm": "^6.4.2",
-    "@electron-forge/maker-squirrel": "^6.4.2",
-    "@electron-forge/maker-zip": "^6.4.2",
-    "@rabbitholesyndrome/electron-forge-maker-portable": "^0.1.1",
-    "@reforged/maker-appimage": "^3.3.1",
     "@types/express": "^4.17.20",
     "@types/node": "^20.8.10",
-    "electron": "^27.0.3",
+    "electron": "^27.0.4",
+    "electron-builder": "^24.6.4",
     "esno": "^0.17.0",
     "typescript": "^5.2.2"
   }

@@ -12,10 +12,15 @@ function createWindow() {
         center: true,
     });
     win.removeMenu();
-    win.loadURL('http://localhost:3001/index.html');
+    win.loadURL('http://localhost:3000/');
 }
 
 app.whenReady().then(createWindow);
+
+app.on('login', (event, webContents, request, authInfo, callback) => {
+    event.preventDefault();
+    callback('admin', 'pass');
+});
 
 app.on('window-all-closed', () => {
     killServer();
