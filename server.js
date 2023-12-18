@@ -5,7 +5,6 @@ const path = require('path');
 const app = express();
 const os = require('os');
 const netplay = require("./functions.js");
-const e = require('express');
 let interfaces = os.networkInterfaces();
 let mainserver = true;
 let addresses = [];
@@ -17,9 +16,14 @@ let appserver;
 let server;
 let io;
 
-function checkAuth(authorization, passwordforserver) {
-    if (!authorization) return false;
-    const [username, password] = Buffer.from(authorization.replace('Basic ', ''), 'base64').toString().split(':')
+function checkAuth(req, passwordforserver) {
+    if (req.query.password === passwordforserver) {
+        return true;
+    }
+    if (!req.headers.authorization) {
+        return false;
+    }
+    const [username, password] = Buffer.from(req.headers.authorization.replace('Basic ', ''), 'base64').toString().split(':')
     return username === 'admin' && password === passwordforserver;
 }
 
@@ -31,10 +35,13 @@ function startserver() {
             res.setHeader('www-authenticate', 'Basic')
             res.sendStatus(401)
         }
-        if (!checkAuth(req.headers.authorization, password)) {
+        if (!checkAuth(req, password)) {
             return reject();
         }
         res.sendFile(path.join(__dirname + '/src/' +'index.html'));
+    });
+    app.get('/loading.html', (req, res) => {
+        res.sendFile(path.join(__dirname + '/src/' +'loading.html'));
     });
     app.get('/img/:imageName', function(req, res) {
         const image = req.params['imageName'];
@@ -49,7 +56,7 @@ function startserver() {
             res.setHeader('www-authenticate', 'Basic')
             res.sendStatus(401)
         }
-        if (!checkAuth(req.headers.authorization, password)) {
+        if (!checkAuth(req, password)) {
             return reject();
         }
         if (req.body.function === "status") {
@@ -133,22 +140,25 @@ function stopnetplay(){
     startserver();
 }
 
-function consolelog(message){
-    if(dev){
+function consolelog(message, smallmessage){
+    if (dev){
         console.log(message);
+    } else if (smallmessage){
+        console.log(smallmessage);
     }
 }
 
 process.on('message', function(m) {
-    console.log(m);
+    consolelog(m);
     if(m.function == 'start'){
         port = m.port;
         password = m.password;
         dev = m.dev;
         appserver = m.app;
         startserver();
-        consolelog("Starting server on port " + (port || 3000) + " with password " + password);
+        consolelog("Starting server on port " + (port || 3000) + " with password " + password, "Starting server");
     }else if(m.function == 'kill'){
+        consolelog("Killing server", "Killing server");
         process.exit();
     }
 });

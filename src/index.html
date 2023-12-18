@@ -160,15 +160,19 @@
                 statuscheck();
             })();
             function api(type) {
-                return fetch('/api', {
+                var request = {
                     method: 'POST',
                     body: JSON.stringify({
                         function: type,
                     }),
                     headers: {
-                    'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
                     }
-                })
+                }
+                if ( new URLSearchParams(window.location.search).get("password")){
+                    request.headers.Authorization = "Basic " + btoa("admin:" + new URLSearchParams(window.location.search).get("password"));
+                }
+                return fetch('/api', request)
                 .then(response => response.json())
                 .then(data => {
                     return data;

@@ -51,6 +51,7 @@
     <p class="loading-text">Starting Server<span id="dots"></span></p>
   </div>
   <script>
+    const invoke = window.__TAURI__.invoke
     const dotsElement = document.getElementById("dots");
 
     function animateDots() {
@@ -60,7 +61,7 @@
     }
     animateDots();
     window.onload = function() {
-      window.electronAPI.start();
+      invoke('close_splashscreen');
     };
   </script>
 </body>
