@@ -16,7 +16,7 @@
     "bundle": {
       "active": true,
       "category": "DeveloperTool",
-      "copyright": "2023 EmulatorJS",
+      "copyright": "2024 EmulatorJS",
       "deb": {
         "depends": []
       },

@@ -31,7 +31,6 @@
     "start": "node index.js",
     "dev": "node index.js -d",
     "app": "tauri dev",
-    "tauri": "tauri",
     "build": "tauri build",
     "build-docker": "docker build -t emulatorjs-netplay-server ."
   },
