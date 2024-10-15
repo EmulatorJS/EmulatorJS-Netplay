@@ -6,7 +6,7 @@ try {
 }
 const path = require('path');
 const cp = require('child_process');
-const config = require('./config.json');
+const config = require('../config.json');
 let port;
 let password;
 let dev;
