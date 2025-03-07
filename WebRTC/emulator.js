@@ -1,4 +1,3 @@
-// Test 72
 class EmulatorJS {
     getCores() {
         let rv = {
@@ -4626,7 +4625,8 @@ createNetplayMenu() {
 
     const joined = this.createElement("div");
     const title2 = this.createElement("strong");
-    title2.innerText = "{roomname}";
+    // Placeholder, will be set dynamically in netplayRoomJoined
+    title2.innerText = "";
     const password = this.createElement("div");
     password.innerText = "Password: ";
     const table2 = this.createElement("table");
@@ -4671,6 +4671,8 @@ createNetplayMenu() {
     this.openNetplayMenu = function() {
         console.log("Opening Netplay menu");
         this.netplayMenu.style.display = "";
+        // Initialize netplay object if not already done
+        this.netplay = this.netplay || {};
         this.netplay.peerConnections = this.netplay.peerConnections || {};
         this.netplay.localStream = this.netplay.localStream || null;
         this.netplay.table = tbody;
@@ -4681,7 +4683,14 @@ createNetplayMenu() {
         this.netplay.tabs = [rooms, joined];
         this.netplay.videoContainer = videoContainer;
         this.netplay.video = video;
-        this.defineNetplayFunctions();
+        // Ensure defineNetplayFunctions is called safely
+        try {
+            this.defineNetplayFunctions();
+        } catch (error) {
+            console.error("Error defining netplay functions:", error);
+            this.displayMessage("Failed to initialize netplay functions", 5000);
+            return;
+        }
 
         if (!this.netplay.name) {
             console.log("Initializing netplay object, player name not set yet");
@@ -4737,7 +4746,7 @@ createNetplayMenu() {
     }.bind(this);
 }
 
-// Section 2
+// NEW Section 2
 defineNetplayFunctions() {
     function guidGenerator() {
         const S4 = function() {
@@ -4899,7 +4908,7 @@ defineNetplayFunctions() {
         this.netplay.localStream = stream;
     };
 
-  //Test Coturn Server
+   //Test Coturn Server
     this.netplayCreatePeerConnection = function(peerId) {
         const pc = new RTCPeerConnection({
             iceServers: [
@@ -5120,12 +5129,12 @@ defineNetplayFunctions() {
         canvas.style.zIndex = "1"; // Ensure canvas is visible
         console.log("Canvas styles:", canvas.style.cssText);
 
-        // Initial canvas setup with fallback dimensions
-        const initialWidth = 700;
-        const initialHeight = 720;
-        canvas.width = initialWidth;
-        canvas.height = initialHeight;
-        console.log("Initial canvas dimensions set to:", { width: canvas.width, height: canvas.height });
+        // Match canvas dimensions to video dimensions
+        const videoWidth = videoElement.videoWidth || 700;
+        const videoHeight = videoElement.videoHeight || 720;
+        canvas.width = videoWidth;
+        canvas.height = videoHeight;
+        console.log("Canvas dimensions set to match video:", { width: canvas.width, height: canvas.height });
 
         // Temporarily set a background color to confirm visibility
         ctx.fillStyle = "red";
@@ -5146,23 +5155,12 @@ defineNetplayFunctions() {
                     }
                 }
             }
-            // Wait for valid dimensions
-            const checkDimensions = () => new Promise(resolve => {
-                const interval = setInterval(() => {
-                    if (videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
-                        clearInterval(interval);
-                        console.log("Video dimensions now valid:", { videoWidth: videoElement.videoWidth, videoHeight: videoElement.videoHeight });
-                        resolve();
-                    } else {
-                        console.log("Waiting for video dimensions, current:", { videoWidth: videoElement.videoWidth, videoHeight: videoElement.videoHeight });
-                    }
-                }, 100);
-            });
-            await checkDimensions();
-            // Update canvas dimensions to match video
-            canvas.width = videoElement.videoWidth;
-            canvas.height = videoElement.videoHeight;
-            console.log("Canvas dimensions updated to match video:", { width: canvas.width, height: canvas.height });
+            // Check video element content
+            if (videoElement.videoWidth === 0 || videoElement.videoHeight === 0) {
+                console.warn("Video element has zero dimensions, likely no valid frame:", { videoWidth: videoElement.videoWidth, videoHeight: videoElement.videoHeight });
+            } else {
+                console.log("Video dimensions:", { videoWidth: videoElement.videoWidth, videoHeight: videoElement.videoHeight });
+            }
         };
 
         const drawFrame = () => {
@@ -5170,17 +5168,17 @@ defineNetplayFunctions() {
                 console.log("Stopping drawFrame: Not in netplay or is owner");
                 return;
             }
-            if (videoElement.readyState >= videoElement.HAVE_CURRENT_DATA && videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
+            if (videoElement.readyState >= videoElement.HAVE_CURRENT_DATA) {
                 // Clear the canvas before drawing
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 // Draw the video frame
-                const drawSuccess = ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-                console.log("Drawing frame to canvas at time:", videoElement.currentTime, "Video readyState:", videoElement.readyState, "Draw success:", !!drawSuccess);
+                ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+                console.log("Drawing frame to canvas at time:", videoElement.currentTime, "Video readyState:", videoElement.readyState);
                 // Log canvas content for debugging
                 const imageData = ctx.getImageData(0, 0, 1, 1).data;
                 console.log("Pixel at (0,0):", imageData, "All zeros?", imageData.every(v => v === 0));
             } else {
-                console.log("Video not ready to draw, readyState:", videoElement.readyState, "Dimensions:", { videoWidth: videoElement.videoWidth, videoHeight: videoElement.videoHeight });
+                console.log("Video not ready to draw, readyState:", videoElement.readyState);
             }
             requestAnimationFrame(drawFrame);
         };
@@ -5530,7 +5528,7 @@ defineNetplayFunctions() {
     };
 }
 
-// Section 3
+// NEW Section 3
 netplayRoomJoined(isOwner, roomName, password, roomId) {
     this.isNetplay = true;
     this.netplay.inputs = {};
@@ -5550,24 +5548,14 @@ netplayRoomJoined(isOwner, roomName, password, roomId) {
     if (!this.netplay.owner) {
         this.canvas.style.display = "none";
         this.netplayCanvas.style.display = "";
-        this.netplay.oldStyles = [
-            this.elements.bottomBar.cheat[0].style.display
-        ];
+        this.netplay.oldStyles = [this.elements.bottomBar.cheat[0].style.display];
         this.elements.bottomBar.cheat[0].style.display = "none";
         this.gameManager.resetCheat();
         console.log("Player 2 joined, awaiting WebRTC stream...");
-        // Log to confirm input event listeners
-        console.log("Game input listeners active:", this.gameManager.functions.simulateInput !== undefined);
-        // Ensure the parent element has focus to capture inputs
+        this.netplayCanvas.style.zIndex = "10";
         this.elements.parent.focus();
-            // Prevent default browser behavior (e.g., scrolling)
-            e.preventDefault();
-            // Send input to netplay.simulateInput
-            const playerIndex = this.netplayGetUserIndex();
-            this.netplay.simulateInput(playerIndex, index, isKeyDown ? 1 : 0);
-        };
-        // Attach input handlers to the parent element
-        this.addEventListener(this.elements.parent, "keydown keyup", handleKeyEvent);
+        // Rely on EJS's existing input system
+        console.log("Game input listeners active:", this.gameManager.functions.simulateInput !== undefined);
         setTimeout(() => {
             if (!this.netplay.webRtcReady) {
                 console.error("WebRTC connection not established after timeout");
@@ -5582,6 +5570,36 @@ netplayRoomJoined(isOwner, roomName, password, roomId) {
         this.netplay.oldStyles = [this.elements.bottomBar.cheat[0].style.display];
         console.log("Owner joined, WebRTC setup deferred to users-updated...");
     }
+}
+
+netplayLeaveRoom() {
+    this.isNetplay = false;
+    this.netplay.tabs[0].style.display = "";
+    this.netplay.tabs[1].style.display = "none";
+    this.netplay.extra = null;
+    this.netplay.playerID = null;
+    this.netplay.createButton.innerText = this.localization("Create a Room");
+    if (this.netplay.socket) {
+        this.netplay.socket.disconnect();
+        this.netplay.socket = null;
+    }
+    this.elements.bottomBar.cheat[0].style.display = this.netplay.oldStyles[0];
+    this.canvas.style.display = "";
+    this.netplayCanvas.style.display = "none";
+    this.netplay.videoContainer.style.display = "none";
+    this.netplayMenu.style.display = ""; // Restore menu visibility
+    // Clean up video element
+    if (this.netplay.video) {
+        this.netplay.video.srcObject = null;
+        if (this.netplay.video.parentElement) {
+            this.netplay.video.parentElement.removeChild(this.netplay.video);
+        }
+    }
+    Object.values(this.netplay.peerConnections).forEach(pcData => pcData.pc.close());
+    this.netplay.peerConnections = {};
+    this.netplay.localStream = null;
+    this.netplay.webRtcReady = false;
+    console.log("Left netplay room, state cleaned up");
 }
 
 // Section 4
@@ -5603,11 +5621,26 @@ netplayDataMessage(data) {
             }
         });
     }
+    if (data.frameData) {
+        console.log("Received frame data on Player 2:", data.frameData);
+        const ctx = this.canvas.getContext('2d');
+        if (data.frameData.pixelSample.every(v => v === 0)) {
+            console.warn("Frame data indicates black screen, attempting reconstruction");
+            this.reconstructFrame(data.frameData.inputs);
+        } else {
+            console.log("Frame data indicates content, relying on WebRTC stream");
+        }
+    }
 }
 
-// Section 5
+// NEW Section 5
 netplaySendMessage(data) {
-    if (this.netplay.socket) this.netplay.socket.emit("data-message", data);
+    if (this.netplay.socket && this.netplay.socket.connected) {
+        this.netplay.socket.emit("data-message", data);
+        console.log("Sent data message:", data);
+    } else {
+        console.error("Cannot send message: Socket is not connected");
+    }
 }
 
 netplayReset() {
@@ -5647,7 +5680,12 @@ netplayUpdateListStart() {
 netplayUpdateListStop() {
     clearInterval(this.netplay.updateListInterval);
 }
-// END New Netplay
+
+// Helper method to get user index (assuming simple indexing for now)
+netplayGetUserIndex() {
+    return Object.keys(this.netplay.players).indexOf(this.netplay.playerID);
+}
+// NEW END scoding-23
 
    createCheatsMenu() {
         const body = this.createPopup("Cheats", {
