@@ -1,163 +1,180 @@
-# EmulatorJS Netplay Server
+# Running Your Own Netplay Server
 
-Working netplay server for https://github.com/EmulatorJS/emulatorJS
+This guide explains how to run the Netplay server designed specifically for Emulatorjs.org
 
-Instructions on how to set up with EmulatorJS are located [here](https://emulatorjs.org/docs4devs/Netplay.html)
+---
 
-Bugs may exist - open an [issue](https://github.com/EmulatorJS/EmulatorJS-Netplay/issues) if you find one
+## 1. Prerequisites
 
-Supports:
-* [Windows](#windows)
-* [Linux](#linux)
-* [Docker](#docker)
-* [Docker Compose](#docker-compose)
+Before you begin, ensure you have the following installed on your system:
 
-Development instructions are located [here](#development)
+- **Node.js** (v16 or later recommended)  
+  👉 [Download Node.js](https://nodejs.org/)
 
-Configurating the server is located [here](#configurating-the-server)
+- **npm** (comes with Node.js) or **yarn** package manager
 
-Building instructions are located [here](#building)
+- **Git**  
+  👉 [Download Git](https://git-scm.com/)
 
-License is located [here](#license)
+---
 
-## To use:
+## 2. Clone the Repository
 
-### Windows:
-
-Go to the releases tab and download the [latest release](https://github.com/EmulatorJS/EmulatorJS-Netplay/releases/tag/latest) for windows and open the exe file.
-
-The GUI version is recommended for most users.
-
-You can also download the source code and run `npm i` to install packages and then `npm start` to start the server.
-
-### Linux:
-
-Go to the releases tab and download the [latest release](https://github.com/EmulatorJS/EmulatorJS-Netplay/releases/tag/latest) for linux and open the AppImage file (you may need to make it executable).
-
-The AppImage version is recommended for most users.
-
-You can also download the source code and run `npm i` to install packages and then `npm start` to start the server.
-
-### Docker:
-
-You can also use docker to run the server this is recomended for production use you can also follow [these](#development) steps for a server.
-
-Download the docker image:
-```
-docker pull ghcr.io/emulatorjs/emulatorjs-netplay/emulatorjs-netplay-server:latest
-```
-Run the docker image:
-```
-docker run -p 3000:3000 -e NETPLAY_PASSWORD=admin123 -e NETPLAY_PORT=3000 -e NETPLAY_DEV=false ghcr.io/emulatorjs/emulatorjs-netplay/emulatorjs-netplay-server:latest
+```bash
+git clone https://github.com/EmulatorJS/EmulatorJS-Netplay
+cd EmulatorJS-Netplay
 ```
 
-### Docker Compose:
+---
 
-To run the server with docker compose you can use this docker-compose.yml file:
+## 3. Install Dependencies
 
-```
-version: "3.9"
-services:
-  emulatorjs-netplay-server:
-    image: ghcr.io/emulatorjs/emulatorjs-netplay/emulatorjs-netplay-server:latest
-    ports:
-      - 3000:3000
-    environment:
-      - NETPLAY_PASSWORD=admin123
-      - NETPLAY_PORT=3000
-      - NETPLAY_DEV=false
-```
+The `server.js` file depends on a few Node.js packages:
 
-Then run:
-```
-docker-compose up
+- `express`
+- `socket.io`
+- `cors`
+
+Install them using **npm**:
+
+```bash
+npm install express socket.io cors
 ```
 
-### Development:
+Or using **yarn**:
 
-Clone the repo:
-
-```
-git clone https://github.com/EmulatorJS/EmulatorJS-Netplay.git
+```bash
+yarn add express socket.io cors
 ```
 
-Install packages:
+---
+
+## 4. Run the Server
+
+To start the server:
+
+```bash
+node server.js
 ```
-npm i
+
+If you want to run it in development mode with auto-restart on file changes, install `nodemon`:
+
+```bash
+npm install -g nodemon
+nodemon server.js
 ```
-Start the server:
+
+---
+
+## 5. Access the Server
+
+By default, the server runs on:
+
 ```
-npm start
+http://localhost:3000
 ```
-You can also use the flags `-p` for port and `-a` for password:
+
+If you want to change the port, set the `PORT` environment variable.
+
+**Linux / macOS (bash / zsh):**
+
+```bash
+PORT=4000 node server.js
 ```
-npm start -- -p 8080 -a admin
+
+**Windows PowerShell:**
+
+```powershell
+$env:PORT=4000; node server.js
 ```
-You can add the flag `-d` to run the server in dev mode.
+
+---
+
+## 6. Test Endpoints
+
+### List Available Rooms
+
+The server provides a REST endpoint:
+
 ```
-npm start -- -p 3000 -a admindev -d
+GET /list?game_id=<gameId>
 ```
-You can also run the dev version with:
+
+Example:
+
 ```
-npm run dev
+http://localhost:3000/list?game_id=123
 ```
-You can run the GUI version with:
+
+This returns a JSON list of available rooms for the given game ID.
+
+### WebSocket Features
+
+Clients can connect via **Socket.IO** to:
+
+- Open rooms (`open-room`)
+- Join rooms (`join-room`)
+- Leave rooms (`leave-room`)
+- Exchange WebRTC signals (`webrtc-signal`)
+- Send messages (`data-message`, `snapshot`, `input`)
+- Receive updates when users join/leave (`users-updated`)
+
+---
+
+## 7. (Optional) Run in Background with PM2
+
+For production, use **PM2** to keep the server running in the background.
+
+Install PM2 globally:
+
+```bash
+npm install -g pm2
 ```
-npm run app
+
+Start the server with a name:
+
+```bash
+pm2 start server.js --name my-server
 ```
-You can run the help with the flag `-h`
 
-## Configurating the server
+View logs:
 
-Notes:
-* Changing the password is recommended.
-
-Config priority:
-* Flags
-* Environment variables
-* Config file
-
-**Editing the password:**
-
-The username is `admin` and the defalt password is `admin123` you can change the password in the *config.json* `password` value.
-
-```json
-{
-    "password" : "admin123"
-}
+```bash
+pm2 logs my-server
 ```
-You can also change the password by setting environment variable `NETPLAY_PASSWORD` to the password you want to use.
 
-**Editing the port:**
+Restart the server:
 
-The default port is `3000` you can change the port in the *config.json* `port` value.
-
-```json
-{
-    "port" : 3000
-}
+```bash
+pm2 restart my-server
 ```
-You can also change the port by setting environment variable `NETPLAY_PORT` to the port you want to use.
 
-**Running in dev mode:**
+Stop the server:
 
-You can run the server in dev mode by setting the `dev` value to `true` in the *config.json* file.
-
-```json
-{
-    "dev" : true
-}
+```bash
+pm2 stop my-server
 ```
-You can also run the server in dev mode by setting the environment variable `NETPLAY_DEV` to `true`.
 
-### Building
+---
 
-You can build:
-* Windows: `npm run build-win`
-* Linux: `npm run build-linux`
-* Docker: `npm run build-docker`
-# LICENSE
+## 8. (Optional) Keep Server Running After Reboot
 
-Licenced under the Apache License 2.0
+To make PM2 auto-start after reboot:
 
-Read the whole license [here](LICENSE)
+```bash
+pm2 startup
+```
+
+Follow the instructions it gives you, then save the current process list:
+
+```bash
+pm2 save
+```
+
+---
+
+## ✅ Done
+
+You now have the server running locally!  
+ 
+- For **production**, use PM2 to keep it running and restart automatically.

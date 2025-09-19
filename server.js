@@ -1,154 +1,275 @@
-const http = require('http');
 const express = require('express');
-const { Server } = require('socket.io');
-const path = require('path');
+const http = require('http');
+const socketIo = require('socket.io');
+const cors = require('cors');
+
 const app = express();
-const os = require('os');
-const netplay = require("./functions.js");
-const e = require('express');
-let interfaces = os.networkInterfaces();
-let mainserver = true;
-let addresses = [];
-let nofusers = {num: 0};
-let port;
-let password;
-let dev;
-let appserver;
-let server;
-let io;
+const server = http.createServer(app);
 
-function checkAuth(authorization, passwordforserver) {
-    if (!authorization) return false;
-    const [username, password] = Buffer.from(authorization.replace('Basic ', ''), 'base64').toString().split(':')
-    return username === 'admin' && password === passwordforserver;
-}
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type'],
+  credentials: true,
+}));
 
-function startserver() {
-    server = http.createServer(app);
-    app.use(express.json());
-    app.get('/', (req, res) => {
-        const reject = () => {
-            res.setHeader('www-authenticate', 'Basic')
-            res.sendStatus(401)
-        }
-        if (!checkAuth(req.headers.authorization, password)) {
-            return reject();
-        }
-        res.sendFile(path.join(__dirname + '/src/' +'index.html'));
-    });
-    app.get('/img/:imageName', function(req, res) {
-        const image = req.params['imageName'];
-        try {
-            res.sendFile(path.join(__dirname + '/src/img/' + image));
-        } catch (err) {
-            res.sendStatus(401)
-        }
-    });
-    app.post('/api', (req, res) => {
-        const reject = () => {
-            res.setHeader('www-authenticate', 'Basic')
-            res.sendStatus(401)
-        }
-        if (!checkAuth(req.headers.authorization, password)) {
-            return reject();
-        }
-        if (req.body.function === "status") {
-            res.end('{ "status": ' + mainserver.toString() + ', "port": ' + port + ', "password": "' + password + '", "nofusers": ' + nofusers.num + ' }'); 
-        }else if(req.body.function === "interface"){
-            for (let k in interfaces) {
-                for (let k2 in interfaces[k]) {
-                    let address = interfaces[k][k2];
-                    if (address.family === 'IPv4') {
-                        addresses.push("http://"+address.address+":"+port+"/");
-                    }
-                }
-            }
-            addresses.push("http://localhost:"+port+"/");
-            res.end('{ "interfaces": ' + JSON.stringify(addresses) + ' }');
-        }else if(req.body.function === "check"){
-            res.end(mainserver.toString());
-        }else if(req.body.function === "nofusers"){
-            res.end('{ "users": ' + nofusers.num + " }");
-        }else if(req.body.function === "stop"){
-            mainserver = false;
-            res.end('true');
-            stopnetplay();
-        }else if(req.body.function === "start"){
-            mainserver = true;
-            res.end('true');
-            startnetplay();
-        }
-    });
-    app.get('/list', function(req, res) {
-        if(mainserver){
-            res.setHeader('Access-Control-Allow-Origin', '*');
-            res.setHeader('Content-Type', 'application/json');
-            let args = netplay.transformArgs(req.url)
-            if (!args.game_id || !args.domain) {
-                res.end('{}');
-                return;
-            }
-            args.game_id = parseInt(args.game_id);
-            let rv = {};
-            for (let i=0; i<global.rooms.length; i++) {
-                if (global.rooms[i].domain !== args.domain ||
-                    global.rooms[i].game_id !== args.game_id) continue;
-                rv[global.rooms[i].sessionid] = {
-                    owner_name: global.rooms[i].owner.extra.name,
-                    room_name: global.rooms[i].name,
-                    max: global.rooms[i].max,
-                    current: global.rooms[i].current,
-                    password: (global.rooms[i].password.trim() ? 1 : 0)
-                }
-            }
-            res.end(JSON.stringify(rv));
-        }
-    })
-    server.listen(port || 3000, '0.0.0.0', () => {
-        if(appserver){
-            process.send({ function: 'url', url: 'http://localhost:' + port});
-        }
-        if(mainserver){
-            startnetplay();
-        }
-    });
-}
-
-function startnetplay(){
-    consolelog("Starting Netplay");
-    io = new Server(server, {
-        cors: {
-            origin: "*",
-            methods: ["GET", "POST"],
-            credentials: true
-        },
-        maxHttpBufferSize: 1e8
-    });
-    netplay.start(io, rooms, nofusers, dev);
-}
-
-function stopnetplay(){
-    consolelog("Stopping Netplay");
-    io.close();
-    startserver();
-}
-
-function consolelog(message){
-    if(dev){
-        console.log(message);
-    }
-}
-
-process.on('message', function(m) {
-    console.log(m);
-    if(m.function == 'start'){
-        port = m.port;
-        password = m.password;
-        dev = m.dev;
-        appserver = m.app;
-        startserver();
-        consolelog("Starting server on port " + (port || 3000) + " with password " + password);
-    }else if(m.function == 'kill'){
-        process.exit();
-    }
+const io = socketIo(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
 });
+
+const PORT = process.env.PORT || 3000;
+let rooms = {};
+
+const getClientIp = (socket) => {
+  const forwarded = socket.handshake.headers['x-forwarded-for'];
+  if (forwarded) {
+    return forwarded.split(',')[0].trim();
+  }
+  return socket.handshake.headers['x-real-ip'] || socket.handshake.address;
+};
+
+setInterval(() => {
+  for (const sessionId in rooms) {
+    if (Object.keys(rooms[sessionId].players).length === 0) {
+      delete rooms[sessionId];
+    }
+  }
+}, 60000);
+
+app.get('/list', (req, res) => {
+  const gameId = req.query.game_id;
+  const openRooms = Object.keys(rooms)
+    .filter((sessionId) => {
+      const room = rooms[sessionId];
+      return (
+        room &&
+        Object.keys(room.players).length < room.maxPlayers &&
+        String(room.gameId) === gameId
+      );
+    })
+    .reduce((acc, sessionId) => {
+      const room = rooms[sessionId];
+      const ownerPlayerId = Object.keys(room.players).find(
+        (playerId) => room.players[playerId].socketId === room.owner
+      );
+      const playerName = ownerPlayerId ? room.players[ownerPlayerId].player_name : 'Unknown';
+      acc[sessionId] = {
+        room_name: room.roomName,
+        current: Object.keys(room.players).length,
+        max: room.maxPlayers,
+        player_name: playerName,
+        hasPassword: !!room.password,
+      };
+      return acc;
+    }, {});
+  res.json(openRooms);
+});
+
+io.on('connection', (socket) => {
+  const clientIp = getClientIp(socket);
+
+  socket.on('open-room', (data, callback) => {
+    let sessionId, playerId, roomName, gameId, maxPlayers, playerName, roomPassword;
+    if (data.extra) {
+      sessionId = data.extra.sessionid;
+      playerId = data.extra.userid || data.extra.playerId;
+      roomName = data.extra.room_name;
+      gameId = data.extra.game_id;
+      maxPlayers = data.maxPlayers || 4;
+      playerName = data.extra.player_name || 'Unknown';
+      roomPassword = data.extra.room_password || 'none';
+    }
+    if (!sessionId || !playerId) {
+      return callback('Invalid data: sessionId and playerId required');
+    }
+    if (rooms[sessionId]) {
+      return callback('Room already exists');
+    }
+
+    let finalDomain = data.extra.domain;
+    if (finalDomain === undefined || finalDomain === null) {
+        finalDomain = 'unknown';
+    }
+
+    rooms[sessionId] = {
+      owner: socket.id,
+      players: { [playerId]: { ...data.extra, socketId: socket.id } },
+      peers: [],
+      roomName: roomName || `Room ${sessionId}`,
+      gameId: gameId || 'default',
+      domain: finalDomain,
+      password: data.password || null,
+      maxPlayers: maxPlayers,
+    };
+    socket.join(sessionId);
+    socket.sessionId = sessionId;
+    socket.playerId = playerId;
+    io.to(sessionId).emit('users-updated', rooms[sessionId].players);
+    callback(null);
+  });
+
+  socket.on('join-room', (data, callback) => {
+    const { sessionid: sessionId, userid: playerId, player_name: playerName = 'Unknown' } = data.extra || {};
+    
+    if (!sessionId || !playerId) {
+        if (typeof callback === 'function') callback('Invalid data: sessionId and playerId required');
+        return;
+    }
+
+    const room = rooms[sessionId];
+    if (!room) {
+        if (typeof callback === 'function') callback('Room not found');
+        return;
+    }
+
+    const roomPassword = data.password || null;
+    if (room.password && room.password !== roomPassword) {
+        if (typeof callback === 'function') callback('Incorrect password');
+        return;
+    }
+    
+    if (Object.keys(room.players).length >= room.maxPlayers) {
+        if (typeof callback === 'function') callback('Room full');
+        return;
+    }
+    
+    room.players[playerId] = { ...data.extra, socketId: socket.id };
+    socket.join(sessionId);
+    socket.sessionId = sessionId;
+    socket.playerId = playerId;
+    
+    io.to(sessionId).emit('users-updated', room.players);
+    
+    if (typeof callback === 'function') {
+        callback(null, room.players);
+    }
+  });
+
+  socket.on('leave-room', () => {
+    if (socket.sessionId && socket.playerId) {
+      const sessionId = socket.sessionId;
+      const playerId = socket.playerId;
+      if (rooms[sessionId]) {
+        delete rooms[sessionId].players[playerId];
+        rooms[sessionId].peers = rooms[sessionId].peers.filter(
+          (peer) => peer.source !== socket.id && peer.target !== socket.id
+        );
+        io.to(sessionId).emit('users-updated', rooms[sessionId].players);
+        if (Object.keys(rooms[sessionId].players).length === 0) {
+          delete rooms[sessionId];
+        } else if (socket.id === rooms[sessionId].owner) {
+          const remainingPlayers = Object.keys(rooms[sessionId].players);
+          if (remainingPlayers.length > 0) {
+            const newOwnerId = rooms[sessionId].players[remainingPlayers[0]].socketId;
+            rooms[sessionId].owner = newOwnerId;
+            rooms[sessionId].peers = rooms[sessionId].peers.map((peer) => {
+              if (peer.source === socket.id) {
+                return { source: newOwnerId, target: peer.target };
+              }
+              return peer;
+            });
+            if (rooms[sessionId].peers.length > 0) {
+              io.to(newOwnerId).emit('webrtc-signal', {
+                target: rooms[sessionId].peers[0].target,
+                requestRenegotiate: true,
+              });
+            }
+            io.to(sessionId).emit('users-updated', rooms[sessionId].players);
+          }
+        }
+      }
+      socket.leave(sessionId);
+      delete socket.sessionId;
+      delete socket.playerId;
+    }
+  });
+
+  socket.on('webrtc-signal', (data) => {
+    try {
+        const { target, candidate, offer, answer, requestRenegotiate } = data || {};
+        
+        if (!target && !requestRenegotiate) {
+            throw new Error('Target ID missing unless requesting renegotiation');
+        }
+        
+        if (requestRenegotiate) {
+            const targetSocket = io.sockets.sockets.get(target);
+            if (targetSocket) {
+                targetSocket.emit('webrtc-signal', {
+                    sender: socket.id,
+                    requestRenegotiate: true,
+                });
+            }
+        } else {
+            io.to(target).emit('webrtc-signal', {
+                sender: socket.id,
+                candidate,
+                offer,
+                answer,
+            });
+        }
+    } catch (error) {
+        console.error(`WebRTC signal error: ${error.message}`);
+    }
+  });
+
+  socket.on('data-message', (data) => {
+    if (socket.sessionId) {
+      socket.to(socket.sessionId).emit('data-message', data);
+    }
+  });
+
+  socket.on('snapshot', (data) => {
+    if (socket.sessionId) {
+      socket.to(socket.sessionId).emit('snapshot', data);
+    }
+  });
+
+  socket.on('input', (data) => {
+    if (socket.sessionId) {
+      socket.to(socket.sessionId).emit('input', data);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    const sessionId = socket.sessionId;
+    const playerId = socket.playerId;
+    if (socket.sessionId && socket.playerId) {
+      if (rooms[sessionId]) {
+        delete rooms[sessionId].players[playerId];
+        rooms[sessionId].peers = rooms[sessionId].peers.filter(
+          (peer) => peer.source !== socket.id && peer.target !== socket.id
+        );
+        io.to(sessionId).emit('users-updated', rooms[sessionId].players);
+        if (Object.keys(rooms[sessionId].players).length === 0) {
+          delete rooms[sessionId];
+        } else if (socket.id === rooms[sessionId].owner) {
+          const remainingPlayers = Object.keys(rooms[sessionId].players);
+          if (remainingPlayers.length > 0) {
+            const newOwnerId = rooms[sessionId].players[remainingPlayers[0]].socketId;
+            rooms[sessionId].owner = newOwnerId;
+            rooms[sessionId].peers = rooms[sessionId].peers.map((peer) => {
+              if (peer.source === socket.id) {
+                return { source: newOwnerId, target: peer.target };
+              }
+              return peer;
+            });
+            if (rooms[sessionId].peers.length > 0) {
+              io.to(newOwnerId).emit('webrtc-signal', {
+                target: rooms[sessionId].peers[0].target,
+                requestRenegotiate: true,
+              });
+            }
+            io.to(sessionId).emit('users-updated', rooms[sessionId].players);
+          }
+        }
+      }
+    }
+  });
+});
+
+server.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));
