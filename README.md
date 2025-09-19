@@ -126,7 +126,7 @@ pm2 stop my-server
 
 ---
 
-## 8. (Optional) Keep Server Running After Reboot
+## 7. (Optional) Keep Server Running After Reboot
 
 To make PM2 auto-start after reboot:
 
