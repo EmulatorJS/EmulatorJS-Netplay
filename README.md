@@ -90,38 +90,7 @@ $env:PORT=4000; node server.js
 
 ---
 
-## 6. Test Endpoints
-
-### List Available Rooms
-
-The server provides a REST endpoint:
-
-```
-GET /list?game_id=<gameId>
-```
-
-Example:
-
-```
-http://localhost:3000/list?game_id=123
-```
-
-This returns a JSON list of available rooms for the given game ID.
-
-### WebSocket Features
-
-Clients can connect via **Socket.IO** to:
-
-- Open rooms (`open-room`)
-- Join rooms (`join-room`)
-- Leave rooms (`leave-room`)
-- Exchange WebRTC signals (`webrtc-signal`)
-- Send messages (`data-message`, `snapshot`, `input`)
-- Receive updates when users join/leave (`users-updated`)
-
----
-
-## 7. (Optional) Run in Background with PM2
+## 6. (Optional) Run in Background with PM2
 
 For production, use **PM2** to keep the server running in the background.
 
