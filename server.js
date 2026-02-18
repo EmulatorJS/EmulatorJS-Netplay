@@ -216,6 +216,74 @@ io.on('connection', (socket) => {
         console.error(`WebRTC signal error: ${error.message}`);
     }
   });
+  
+  const CHAT_COOLDOWN_MS = 400;
+
+  socket.on('chat-message', (data, ack) => {
+    try {
+      if (!socket.sessionId || !socket.playerId) {
+        if (typeof ack === 'function') ack({ ok: false, error: 'Not in a room' });
+        return;
+      }
+
+      const sessionId = socket.sessionId;
+      const room = rooms[sessionId];
+
+      if (!room || !room.players || !room.players[socket.playerId]) {
+        if (typeof ack === 'function') ack({ ok: false, error: 'Room not found' });
+        return;
+      }
+
+      const now = Date.now();
+      if (socket._lastChatAt && (now - socket._lastChatAt) < CHAT_COOLDOWN_MS) {
+        if (typeof ack === 'function') ack({ ok: false, error: 'Slow down' });
+        return;
+      }
+      socket._lastChatAt = now;
+
+      let to = 'all';
+      let message = '';
+
+      if (typeof data === 'string') {
+        message = data;
+      } else if (data && typeof data === 'object') {
+        to = data.to || 'all';
+        message = data.message || '';
+      }
+
+      message = String(message || '').replace(/\s+/g, ' ').trim().slice(0, 300);
+      if (!message) {
+        if (typeof ack === 'function') ack({ ok: false, error: 'Empty message' });
+        return;
+      }
+
+      const fromPlayer = room.players[socket.playerId];
+      const payload = {
+        ts: now,
+        to: to,
+        userid: socket.playerId,
+        player_name: fromPlayer.player_name || 'Unknown',
+        message: message,
+      };
+
+      if (to === 'all') {
+        io.to(sessionId).emit('chat-message', payload);
+      } else {
+        const targetPlayer = room.players[to];
+        if (!targetPlayer || !targetPlayer.socketId) {
+          if (typeof ack === 'function') ack({ ok: false, error: 'Target not found' });
+          return;
+        }
+        io.to(socket.id).emit('chat-message', payload);
+        io.to(targetPlayer.socketId).emit('chat-message', payload);
+      }
+
+      if (typeof ack === 'function') ack({ ok: true });
+    } catch (e) {
+      console.error('chat-message error:', e);
+      if (typeof ack === 'function') ack({ ok: false, error: 'Server error' });
+    }
+  });
 
   socket.on('data-message', (data) => {
     if (socket.sessionId) {
