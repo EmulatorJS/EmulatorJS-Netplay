@@ -63,6 +63,7 @@ struct RoomInfo {
 
 // --- Socket Payload Structs ---
 
+#[allow(dead_code)]
 #[derive(Deserialize)]
 struct OpenRoomData {
     extra: Option<Value>,
@@ -71,12 +72,14 @@ struct OpenRoomData {
     max_players: Option<usize>,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize)]
 struct JoinRoomData {
     extra: Option<Value>,
     password: Option<String>,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize)]
 struct WebRtcSignalData {
     target: Option<String>,
@@ -179,13 +182,13 @@ async fn on_connect(socket: SocketRef) {
         let player_id = extra.get("userid").or_else(|| extra.get("playerId")).and_then(|v| v.as_str()).unwrap_or("").to_string();
 
         if session_id.is_empty() || player_id.is_empty() {
-            let _ = s.emit("open-room-result", json!({ "success": false, "message": "Invalid data: sessionId and playerId required" }));
+            let _ = s.emit("open-room-result", &json!({ "success": false, "message": "Invalid data: sessionId and playerId required" }));
             return;
         }
 
         let mut rooms_lock = rooms.write().await;
         if rooms_lock.contains_key(&session_id) {
-            let _ = s.emit("open-room-result", json!({ "success": false, "message": "Room already exists" }));
+            let _ = s.emit("open-room-result", &json!({ "success": false, "message": "Room already exists" }));
             return;
         }
 
@@ -212,7 +215,7 @@ async fn on_connect(socket: SocketRef) {
         };
         rooms_lock.insert(session_id.clone(), room.clone());
         let _ = s.join(session_id.clone());
-        let _ = s.emit("open-room-result", json!({ "success": true, "room": room }));
+        let _ = s.emit("open-room-result", &json!({ "success": true, "room": room }));
     });
 
     socket.on("join-room", |s: SocketRef, Data::<JoinRoomData>(data), SocketState::<AppState>(rooms)| async move {
@@ -221,7 +224,7 @@ async fn on_connect(socket: SocketRef) {
         let player_id = extra.get("userid").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
         if session_id.is_empty() || player_id.is_empty() {
-            let _ = s.emit("join-room-result", json!({ "success": false, "message": "Invalid data: sessionId and playerId required" }));
+            let _ = s.emit("join-room-result", &json!({ "success": false, "message": "Invalid data: sessionId and playerId required" }));
             return;
         }
 
@@ -229,18 +232,18 @@ async fn on_connect(socket: SocketRef) {
         let room = match rooms_lock.get_mut(&session_id) {
             Some(r) => r,
             None => {
-                let _ = s.emit("join-room-result", json!({ "success": false, "message": "Room not found" }));
+                let _ = s.emit("join-room-result", &json!({ "success": false, "message": "Room not found" }));
                 return;
             },
         };
 
         if room.password != data.password.unwrap_or(String::new()) {
-            let _ = s.emit("join-room-result", json!({ "success": false, "message": "Incorrect password" }));
+            let _ = s.emit("join-room-result", &json!({ "success": false, "message": "Incorrect password" }));
             return;
         }
 
         if room.players.len() >= room.max_players {
-            let _ = s.emit("join-room-result", json!({ "success": false, "message": "Room full" }));
+            let _ = s.emit("join-room-result", &json!({ "success": false, "message": "Room full" }));
             return;
         }
 
@@ -249,7 +252,7 @@ async fn on_connect(socket: SocketRef) {
         room.players.insert(player_id, player_data);
 
         let _ = s.join(session_id.clone());
-        let _ = s.emit("join-room-result", json!({ "success": true, "room": room }));
+        let _ = s.emit("join-room-result", &json!({ "success": true, "room": room }));
     });
 
     // These smaller handlers usually don't have trait issues
@@ -257,12 +260,12 @@ async fn on_connect(socket: SocketRef) {
         let request_renegotiate = data.request_renegotiate.unwrap_or(false);
         if let Some(target) = data.target {
             if request_renegotiate {
-                let _ = s.to(target).emit("webrtc-signal", json!({
+                let _ = s.to(target).emit("webrtc-signal", &json!({
                     "sender": s.id.to_string(),
                     "requestRenegotiate": true,
                 }));
             } else {
-                let _ = s.to(target).emit("webrtc-signal", json!({
+                let _ = s.to(target).emit("webrtc-signal", &json!({
                     "sender": s.id.to_string(),
                     "candidate": data.candidate,
                     "offer": data.offer,
