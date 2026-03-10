@@ -6,20 +6,24 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use socketioxide::{
-    extract::{Data, SocketRef, State as SocketState},
+    extract::{AckSender, Data, SocketRef, State as SocketState},
     SocketIo,
 };
 use std::{
     collections::HashMap,
     net::SocketAddr,
     sync::Arc,
-    time::Duration,
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tokio::sync::RwLock;
-use tower_http::cors::CorsLayer;
-use tracing::info;
+use tower_http::cors::{Any, CorsLayer};
 
-// --- Shared Application State ---
+#[derive(Debug, Clone)]
+struct SocketIndex {
+    session_id: String,
+    player_id: String,
+    last_chat_at: u64,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Peer {
@@ -27,28 +31,29 @@ struct Peer {
     target: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 struct Room {
     owner: String,
-    players: HashMap<String, Value>, 
+    players: HashMap<String, Value>,
     peers: Vec<Peer>,
-    #[serde(rename = "roomName")]
     room_name: String,
-    #[serde(rename = "gameId")]
-    game_id: i64,
+    game_id: String,
     domain: String,
-    password: String,
-    #[serde(rename = "maxPlayers")]
+    password: Option<String>,
     max_players: usize,
 }
 
-type AppState = Arc<RwLock<HashMap<String, Room>>>;
-
-// --- HTTP Route Structs ---
+#[derive(Clone)]
+struct AppState {
+    rooms: Arc<RwLock<HashMap<String, Room>>>,
+    index: Arc<RwLock<HashMap<String, SocketIndex>>>,
+    games: Arc<RwLock<HashMap<String, Value>>>,
+}
 
 #[derive(Deserialize)]
 struct ListQuery {
-    game_id: i64,
+    domain: Option<String>,
+    game_id: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -59,11 +64,10 @@ struct RoomInfo {
     player_name: String,
     #[serde(rename = "hasPassword")]
     has_password: bool,
+    #[serde(rename = "gameId")]
+    game_id: String,
 }
 
-// --- Socket Payload Structs ---
-
-#[allow(dead_code)]
 #[derive(Deserialize)]
 struct OpenRoomData {
     extra: Option<Value>,
@@ -72,14 +76,12 @@ struct OpenRoomData {
     max_players: Option<usize>,
 }
 
-#[allow(dead_code)]
 #[derive(Deserialize)]
 struct JoinRoomData {
     extra: Option<Value>,
     password: Option<String>,
 }
 
-#[allow(dead_code)]
 #[derive(Deserialize)]
 struct WebRtcSignalData {
     target: Option<String>,
@@ -90,255 +92,618 @@ struct WebRtcSignalData {
     request_renegotiate: Option<bool>,
 }
 
-// --- Main HTTP Endpoints ---
+fn now_ms() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or(Duration::from_secs(0))
+        .as_millis() as u64
+}
+
+fn normalize_password(p: Option<String>) -> Option<String> {
+    let p = p?.trim().to_string();
+    if p.is_empty() || p.eq_ignore_ascii_case("none") {
+        None
+    } else {
+        Some(p)
+    }
+}
+
+fn v_to_string_lossy(v: &Value, k: &str) -> Option<String> {
+    let x = v.get(k)?;
+    if let Some(s) = x.as_str() {
+        Some(s.to_string())
+    } else if x.is_number() || x.is_boolean() {
+        Some(x.to_string())
+    } else {
+        None
+    }
+}
+
+fn value_to_string_lossy(x: &Value) -> Option<String> {
+    if let Some(s) = x.as_str() {
+        Some(s.to_string())
+    } else if x.is_number() || x.is_boolean() {
+        Some(x.to_string())
+    } else {
+        None
+    }
+}
 
 async fn list_rooms(
-    Query(query): Query<ListQuery>,
-    State(rooms): State<AppState>,
+    Query(q): Query<ListQuery>,
+    State(state): State<AppState>,
 ) -> Json<HashMap<String, RoomInfo>> {
-    let rooms_lock = rooms.read().await;
-    let mut response = HashMap::new();
+    let Some(dom) = q.domain else { return Json(HashMap::new()); };
+    let Some(gid) = q.game_id else { return Json(HashMap::new()); };
 
-    for (session_id, room) in rooms_lock.iter() {
-        if room.players.len() < room.max_players && room.game_id == query.game_id {
-            let owner_name = room
-                .players
-                .values()
-                .find(|p| p.get("socketId").and_then(|v| v.as_str()) == Some(&room.owner))
-                .and_then(|p| p.get("player_name").and_then(|v| v.as_str()))
-                .unwrap_or("Unknown");
+    let rooms = state.rooms.read().await;
+    let mut out = HashMap::new();
 
-            response.insert(
-                session_id.clone(),
-                RoomInfo {
-                    room_name: room.room_name.clone(),
-                    current: room.players.len(),
-                    max: room.max_players,
-                    player_name: owner_name.to_string(),
-                    has_password: !room.password.trim().is_empty(),
-                },
-            );
+    for (session_id, room) in rooms.iter() {
+        if room.domain != dom || room.game_id != gid {
+            continue;
         }
-    }
-    Json(response)
-}
 
-// --- Helper Functions ---
+        let owner_name = room
+            .players
+            .values()
+            .find(|p| p.get("socketId").and_then(|v| v.as_str()) == Some(room.owner.as_str()))
+            .and_then(|p| p.get("player_name").and_then(|v| v.as_str()))
+            .unwrap_or("Unknown");
 
-async fn get_session_id_for_socket(rooms: &AppState, socket_id: &str) -> Option<String> {
-    let rooms_lock = rooms.read().await;
-    rooms_lock.iter().find_map(|(s_id, r)| {
-        r.players.values()
-         .any(|p| p.get("socketId").and_then(|v| v.as_str()) == Some(socket_id))
-         .then(|| s_id.clone())
-    })
-}
-
-async fn handle_leave(s: SocketRef, rooms: AppState) {
-    let mut rooms_lock = rooms.write().await;
-    let mut found = None;
-    let s_id_str = s.id.to_string();
-
-    for (session_id, room) in rooms_lock.iter() {
-        if room.players.values().any(|p| p.get("socketId").and_then(|v| v.as_str()) == Some(&s_id_str)) {
-            let player_id = room.players.iter()
-                .find(|(_, p)| p.get("socketId").and_then(|v| v.as_str()) == Some(&s_id_str))
-                .map(|(k, _)| k.clone());
-            if let Some(pid) = player_id {
-                found = Some((session_id.clone(), pid));
-            }
-            break;
-        }
+        out.insert(
+            session_id.clone(),
+            RoomInfo {
+                room_name: room.room_name.clone(),
+                current: room.players.len(),
+                max: room.max_players,
+                player_name: owner_name.to_string(),
+                has_password: room.password.is_some(),
+                game_id: room.game_id.clone(),
+            },
+        );
     }
 
-    if let Some((session_id, player_id)) = found {
-        if let Some(room) = rooms_lock.get_mut(&session_id) {
+    Json(out)
+}
+
+async fn games(State(state): State<AppState>) -> Json<HashMap<String, Value>> {
+    let g = state.games.read().await;
+    Json(g.clone())
+}
+
+fn collect_socket_ids(players: &HashMap<String, Value>) -> Vec<String> {
+    players
+        .values()
+        .filter_map(|p| p.get("socketId").and_then(|v| v.as_str()).map(|s| s.to_string()))
+        .collect()
+}
+
+async fn emit_to_sockets_including_self(
+    s: &SocketRef,
+    socket_ids: &[String],
+    event: &str,
+    payload: &Value,
+) {
+    for sid in socket_ids {
+        if sid == &s.id.to_string() {
+            let _ = s.emit(event, payload);
+        } else {
+            let _ = s.to(sid.clone()).emit(event, payload).await;
+        }
+    }
+}
+
+async fn emit_to_sockets_excluding_self(
+    s: &SocketRef,
+    socket_ids: &[String],
+    event: &str,
+    payload: &Value,
+) {
+    let me = s.id.to_string();
+    for sid in socket_ids {
+        if sid != &me {
+            let _ = s.to(sid.clone()).emit(event, payload).await;
+        }
+    }
+}
+
+async fn leave_internal(s: &SocketRef, state: &AppState) {
+    let sid = s.id.to_string();
+
+    let idx = {
+        let index = state.index.read().await;
+        index.get(&sid).cloned()
+    };
+    let Some(idx) = idx else { return };
+
+    let session_id = idx.session_id.clone();
+    let player_id = idx.player_id.clone();
+
+    let mut players_snapshot: HashMap<String, Value> = HashMap::new();
+    let mut socket_ids_snapshot: Vec<String> = vec![];
+    let mut new_owner_renegotiate: Option<(String, String)> = None;
+
+    {
+        let mut rooms = state.rooms.write().await;
+        if let Some(room) = rooms.get_mut(&session_id) {
             room.players.remove(&player_id);
-            room.peers.retain(|p| p.source != s_id_str && p.target != s_id_str);
-            
-            let _ = s.within(session_id.clone()).emit("users-updated", &room.players);
+            room.peers.retain(|p| p.source != sid && p.target != sid);
 
-            if room.players.is_empty() {
-                rooms_lock.remove(&session_id);
-            } else if s_id_str == room.owner {
-                if let Some(new_owner_socket) = room.players.values().next().and_then(|v| v.get("socketId")).and_then(|v| v.as_str()) {
-                    let new_owner = new_owner_socket.to_string();
+            if room.owner == sid && !room.players.is_empty() {
+                if let Some(next_owner) = room
+                    .players
+                    .values()
+                    .next()
+                    .and_then(|v| v.get("socketId"))
+                    .and_then(|v| v.as_str())
+                {
+                    let new_owner = next_owner.to_string();
                     room.owner = new_owner.clone();
-                    // ... rest of the owner logic remains same ...
-                    let _ = s.within(session_id).emit("users-updated", &room.players);
+
+                    for peer in room.peers.iter_mut() {
+                        if peer.source == sid {
+                            peer.source = new_owner.clone();
+                        }
+                    }
+
+                    if let Some(first_peer) = room.peers.first() {
+                        new_owner_renegotiate = Some((new_owner, first_peer.target.clone()));
+                    }
                 }
             }
-        }
-    }
-}
 
-// --- Socket Handlers ---
+            players_snapshot = room.players.clone();
+            socket_ids_snapshot = collect_socket_ids(&players_snapshot);
 
-async fn on_connect(socket: SocketRef) {
-
-    socket.on("open-room", |s: SocketRef, Data::<OpenRoomData>(data), SocketState::<AppState>(rooms)| async move {
-        let extra = data.extra.unwrap_or(json!({}));
-        let session_id = extra.get("sessionid").and_then(|v| v.as_str()).unwrap_or("").to_string();
-        let player_id = extra.get("userid").or_else(|| extra.get("playerId")).and_then(|v| v.as_str()).unwrap_or("").to_string();
-
-        if session_id.is_empty() || player_id.is_empty() {
-            let _ = s.emit("open-room-result", &json!({ "success": false, "message": "Invalid data: sessionId and playerId required" }));
-            return;
-        }
-
-        let mut rooms_lock = rooms.write().await;
-        if rooms_lock.contains_key(&session_id) {
-            let _ = s.emit("open-room-result", &json!({ "success": false, "message": "Room already exists" }));
-            return;
-        }
-
-        // Room setup logic...
-        let room_name = extra.get("room_name").and_then(|v| v.as_str()).unwrap_or(&format!("Room {}", session_id)).to_string();
-        let game_id = extra.get("game_id").and_then(|v| v.as_i64()).unwrap_or(0);
-        let domain = extra.get("domain").and_then(|v| v.as_str()).unwrap_or("unknown").to_string();
-        let max_players = data.max_players.unwrap_or(4);
-
-        let mut player_data = extra.clone();
-        player_data["socketId"] = json!(s.id.to_string());
-        let mut players = HashMap::new();
-        players.insert(player_id.clone(), player_data);
-
-        let room = Room {
-            owner: s.id.to_string(),
-            players,
-            peers: vec![],
-            room_name,
-            game_id,
-            domain,
-            password: data.password.unwrap_or(String::new()),
-            max_players,
-        };
-        rooms_lock.insert(session_id.clone(), room.clone());
-        let _ = s.join(session_id.clone());
-        let _ = s.emit("open-room-result", &json!({ "success": true, "room": room }));
-    });
-
-    socket.on("join-room", |s: SocketRef, Data::<JoinRoomData>(data), SocketState::<AppState>(rooms)| async move {
-        let extra = data.extra.unwrap_or(json!({}));
-        let session_id = extra.get("sessionid").and_then(|v| v.as_str()).unwrap_or("").to_string();
-        let player_id = extra.get("userid").and_then(|v| v.as_str()).unwrap_or("").to_string();
-
-        if session_id.is_empty() || player_id.is_empty() {
-            let _ = s.emit("join-room-result", &json!({ "success": false, "message": "Invalid data: sessionId and playerId required" }));
-            return;
-        }
-
-        let mut rooms_lock = rooms.write().await;
-        let room = match rooms_lock.get_mut(&session_id) {
-            Some(r) => r,
-            None => {
-                let _ = s.emit("join-room-result", &json!({ "success": false, "message": "Room not found" }));
-                return;
-            },
-        };
-
-        if room.password != data.password.unwrap_or(String::new()) {
-            let _ = s.emit("join-room-result", &json!({ "success": false, "message": "Incorrect password" }));
-            return;
-        }
-
-        if room.players.len() >= room.max_players {
-            let _ = s.emit("join-room-result", &json!({ "success": false, "message": "Room full" }));
-            return;
-        }
-
-        let mut player_data = extra.clone();
-        player_data["socketId"] = json!(s.id.to_string());
-        room.players.insert(player_id, player_data);
-
-        let _ = s.join(session_id.clone());
-        let _ = s.emit("join-room-result", &json!({ "success": true, "room": room }));
-    });
-
-    // These smaller handlers usually don't have trait issues
-    socket.on("webrtc-signal", |s: SocketRef, Data::<WebRtcSignalData>(data)| async move {
-        let request_renegotiate = data.request_renegotiate.unwrap_or(false);
-        if let Some(target) = data.target {
-            if request_renegotiate {
-                let _ = s.to(target).emit("webrtc-signal", &json!({
-                    "sender": s.id.to_string(),
-                    "requestRenegotiate": true,
-                }));
-            } else {
-                let _ = s.to(target).emit("webrtc-signal", &json!({
-                    "sender": s.id.to_string(),
-                    "candidate": data.candidate,
-                    "offer": data.offer,
-                    "answer": data.answer,
-                }));
+            if room.players.is_empty() {
+                rooms.remove(&session_id);
             }
         }
-    });
+    }
 
-    socket.on("data-message", |s: SocketRef, SocketState::<AppState>(rooms), Data::<Value>(data)| async move {
-        if let Some(session_id) = get_session_id_for_socket(&rooms, &s.id.to_string()).await {
-            let _ = s.to(session_id).emit("data-message", &data);
-        }
-    });
+    if let Some((new_owner_socket_id, target_socket_id)) = new_owner_renegotiate {
+        let payload = json!({ "target": target_socket_id, "requestRenegotiate": true });
+        let _ = s.to(new_owner_socket_id).emit("webrtc-signal", &payload).await;
+    }
 
-    socket.on("snapshot", |s: SocketRef, SocketState::<AppState>(rooms), Data::<Value>(data)| async move {
-        if let Some(session_id) = get_session_id_for_socket(&rooms, &s.id.to_string()).await {
-            let _ = s.to(session_id).emit("snapshot", &data);
-        }
-    });
+    if !socket_ids_snapshot.is_empty() {
+        let payload = Value::Object(players_snapshot.into_iter().collect());
+        emit_to_sockets_excluding_self(s, &socket_ids_snapshot, "users-updated", &payload).await;
+    }
 
-    socket.on("input", |s: SocketRef, SocketState::<AppState>(rooms), Data::<Value>(data)| async move {
-        if let Some(session_id) = get_session_id_for_socket(&rooms, &s.id.to_string()).await {
-            let _ = s.to(session_id).emit("input", &data);
-        }
-    });
+    {
+        let mut index = state.index.write().await;
+        index.remove(&sid);
+    }
 
-    // For disconnect/leave, we use the helper logic
-    socket.on("leave-room", |s: SocketRef, SocketState::<AppState>(rooms)| async move {
-        handle_leave(s, rooms).await;
-    });
-
-    socket.on_disconnect(|s: SocketRef, SocketState::<AppState>(rooms)| async move {
-        handle_leave(s, rooms).await;
-    });
+    let _ = s.leave(session_id);
 }
-// --- Main Entrypoint ---
+
+async fn on_connect(socket: SocketRef) {
+    socket.join(socket.id.to_string());
+
+    socket.on(
+        "open-room",
+        |s: SocketRef,
+         Data::<OpenRoomData>(data),
+         SocketState::<AppState>(state),
+         ack: AckSender| async move {
+            let mut extra = data.extra.unwrap_or_else(|| json!({}));
+            if !extra.is_object() {
+                extra = json!({});
+            }
+
+            let session_id = v_to_string_lossy(&extra, "sessionid").unwrap_or_default();
+            let player_id = v_to_string_lossy(&extra, "userid")
+                .or_else(|| v_to_string_lossy(&extra, "playerId"))
+                .unwrap_or_default();
+
+            if session_id.is_empty() || player_id.is_empty() {
+                let _ = ack.send(&("Invalid data: sessionId and playerId required",));
+                return;
+            }
+
+            let room_name = v_to_string_lossy(&extra, "room_name")
+                .unwrap_or_else(|| format!("Room {}", session_id));
+
+            let game_id = v_to_string_lossy(&extra, "game_id").unwrap_or_else(|| "default".into());
+            let domain = v_to_string_lossy(&extra, "domain").unwrap_or_else(|| "unknown".into());
+            let max_players = data.max_players.unwrap_or(4);
+            let password = normalize_password(data.password);
+
+            extra["socketId"] = json!(s.id.to_string());
+
+            let mut players = HashMap::new();
+            players.insert(player_id.clone(), extra);
+
+            {
+                let mut rooms = state.rooms.write().await;
+                if rooms.contains_key(&session_id) {
+                    let _ = ack.send(&("Room already exists",));
+                    return;
+                }
+
+                rooms.insert(
+                    session_id.clone(),
+                    Room {
+                        owner: s.id.to_string(),
+                        players: players.clone(),
+                        peers: vec![],
+                        room_name,
+                        game_id,
+                        domain,
+                        password,
+                        max_players,
+                    },
+                );
+            }
+
+            s.join(session_id.clone());
+
+            {
+                let mut index = state.index.write().await;
+                index.insert(
+                    s.id.to_string(),
+                    SocketIndex {
+                        session_id: session_id.clone(),
+                        player_id: player_id.clone(),
+                        last_chat_at: 0,
+                    },
+                );
+            }
+
+            let _ = ack.send(&(Value::Null,));
+
+            let socket_ids = vec![s.id.to_string()];
+            let payload = json!(players);
+            emit_to_sockets_including_self(&s, &socket_ids, "users-updated", &payload).await;
+        },
+    );
+
+    socket.on(
+        "join-room",
+        |s: SocketRef,
+         Data::<JoinRoomData>(data),
+         SocketState::<AppState>(state),
+         ack: AckSender| async move {
+            let mut extra = data.extra.unwrap_or_else(|| json!({}));
+            if !extra.is_object() {
+                extra = json!({});
+            }
+
+            let session_id = v_to_string_lossy(&extra, "sessionid").unwrap_or_default();
+            let player_id = v_to_string_lossy(&extra, "userid")
+                .or_else(|| v_to_string_lossy(&extra, "playerId"))
+                .unwrap_or_default();
+
+            if session_id.is_empty() || player_id.is_empty() {
+                let _ = ack.send(&("Invalid data: sessionId and playerId required",));
+                return;
+            }
+
+            let provided_pw = normalize_password(data.password);
+
+            let (players_snapshot, socket_ids_snapshot) = {
+                let mut rooms = state.rooms.write().await;
+                let Some(room) = rooms.get_mut(&session_id) else {
+                    let _ = ack.send(&("Room not found",));
+                    return;
+                };
+
+                if let Some(ref room_pw) = room.password {
+                    if provided_pw.as_deref() != Some(room_pw.as_str()) {
+                        let _ = ack.send(&("Incorrect password",));
+                        return;
+                    }
+                }
+
+                if room.players.len() >= room.max_players {
+                    let _ = ack.send(&("Room full",));
+                    return;
+                }
+
+                extra["socketId"] = json!(s.id.to_string());
+                room.players.insert(player_id.clone(), extra);
+
+                let snap = room.players.clone();
+                let sids = collect_socket_ids(&snap);
+                (snap, sids)
+            };
+
+            s.join(session_id.clone());
+
+            {
+                let mut index = state.index.write().await;
+                index.insert(
+                    s.id.to_string(),
+                    SocketIndex {
+                        session_id: session_id.clone(),
+                        player_id: player_id.clone(),
+                        last_chat_at: 0,
+                    },
+                );
+            }
+
+            let _ = ack.send(&(Value::Null, json!(players_snapshot.clone())));
+
+            let payload = json!(players_snapshot);
+            emit_to_sockets_including_self(&s, &socket_ids_snapshot, "users-updated", &payload).await;
+        },
+    );
+
+    socket.on(
+        "leave-room",
+        |s: SocketRef, SocketState::<AppState>(state)| async move {
+            leave_internal(&s, &state).await;
+        },
+    );
+
+    socket.on_disconnect(
+        |s: SocketRef, SocketState::<AppState>(state)| async move {
+            leave_internal(&s, &state).await;
+        },
+    );
+
+    socket.on(
+        "chat-message",
+        |s: SocketRef, Data::<Value>(data), SocketState::<AppState>(state), ack: AckSender| async move {
+            let (session_id, player_id, now) = {
+                let mut index_lock = state.index.write().await;
+                let Some(idx) = index_lock.get_mut(&s.id.to_string()) else {
+                    let _ = ack.send(&(json!({ "ok": false, "error": "Not in a room" }),));
+                    return;
+                };
+
+                let now = now_ms();
+                if now - idx.last_chat_at < 400 {
+                    let _ = ack.send(&(json!({ "ok": false, "error": "Slow down" }),));
+                    return;
+                }
+
+                idx.last_chat_at = now;
+                (idx.session_id.clone(), idx.player_id.clone(), now)
+            };
+
+            let mut to_str = "all".to_string();
+            let mut message = String::new();
+
+            if let Some(msg_str) = data.as_str() {
+                message = msg_str.to_string();
+            } else if let Some(obj) = data.as_object() {
+                if let Some(t) = obj.get("to").and_then(value_to_string_lossy) {
+                    to_str = t;
+                }
+                if let Some(m) = obj.get("message").and_then(|v| v.as_str()) {
+                    message = m.to_string();
+                }
+            }
+
+            message = message.split_whitespace().collect::<Vec<_>>().join(" ");
+            message = message.chars().take(300).collect();
+
+            if message.is_empty() {
+                let _ = ack.send(&(json!({ "ok": false, "error": "Empty message" }),));
+                return;
+            }
+
+            to_str = to_str.trim().to_string();
+            if to_str.is_empty() {
+                to_str = "all".to_string();
+            }
+
+            let (player_name, socket_ids, target_socket_opt) = {
+                let rooms = state.rooms.read().await;
+                let Some(room) = rooms.get(&session_id) else {
+                    let _ = ack.send(&(json!({ "ok": false, "error": "Room not found" }),));
+                    return;
+                };
+
+                let Some(from_player) = room.players.get(&player_id) else {
+                    let _ = ack.send(&(json!({ "ok": false, "error": "Not in room" }),));
+                    return;
+                };
+
+                let player_name = v_to_string_lossy(from_player, "player_name")
+                    .unwrap_or_else(|| "Unknown".to_string());
+
+                let socket_ids = collect_socket_ids(&room.players);
+
+                let is_private = !to_str.eq_ignore_ascii_case("all") && to_str != player_id;
+
+                let target_socket_opt = if is_private {
+                    if let Some(target_player) = room.players.get(&to_str) {
+                        target_player
+                            .get("socketId")
+                            .and_then(|v| v.as_str())
+                            .map(|x| x.to_string())
+                    } else {
+                        let is_socket = room.players.values().any(|p| {
+                            p.get("socketId").and_then(|v| v.as_str()) == Some(to_str.as_str())
+                        });
+                        if is_socket { Some(to_str.clone()) } else { None }
+                    }
+                } else {
+                    None
+                };
+
+                (player_name, socket_ids, target_socket_opt)
+            };
+
+            let payload = json!({
+                "ts": now,
+                "to": if target_socket_opt.is_some() { to_str.clone() } else { "all".to_string() },
+                "userid": player_id,
+                "player_name": player_name,
+                "message": message
+            });
+
+            if let Some(target_socket) = target_socket_opt {
+                let _ = s.emit("chat-message", &payload);
+                let _ = s.to(target_socket).emit("chat-message", &payload).await;
+            } else {
+                emit_to_sockets_including_self(&s, &socket_ids, "chat-message", &payload).await;
+            }
+
+            let _ = ack.send(&(json!({ "ok": true }),));
+        },
+    );
+
+    socket.on(
+        "webrtc-signal",
+        |s: SocketRef, SocketState::<AppState>(state), Data::<WebRtcSignalData>(data)| async move {
+            let sender = s.id.to_string();
+
+            let session_id_opt = {
+                let idx = state.index.read().await;
+                idx.get(&sender).map(|x| x.session_id.clone())
+            };
+
+            let request = data.request_renegotiate.unwrap_or(false);
+            if !request && data.target.is_none() {
+                return;
+            }
+
+            let target = data.target.clone().unwrap_or_default();
+
+            if data.offer.is_some() {
+                if let Some(session_id) = session_id_opt.clone() {
+                    let mut rooms = state.rooms.write().await;
+                    if let Some(room) = rooms.get_mut(&session_id) {
+                        let exists = room.peers.iter().any(|p| p.source == sender && p.target == target);
+                        if !exists {
+                            room.peers.push(Peer {
+                                source: sender.clone(),
+                                target: target.clone(),
+                            });
+                        }
+                    }
+                }
+            }
+
+            let mut m = serde_json::Map::<String, Value>::new();
+            m.insert("sender".into(), json!(sender));
+
+            if request {
+                m.insert("requestRenegotiate".into(), json!(true));
+            } else {
+                if let Some(c) = data.candidate {
+                    m.insert("candidate".into(), c);
+                }
+                if let Some(o) = data.offer {
+                    m.insert("offer".into(), o);
+                }
+                if let Some(a) = data.answer {
+                    m.insert("answer".into(), a);
+                }
+            }
+
+            let payload = Value::Object(m);
+            let _ = s.to(target.clone()).emit("webrtc-signal", &payload).await;
+        },
+    );
+
+    socket.on(
+        "data-message",
+        |s: SocketRef, SocketState::<AppState>(state), Data::<Value>(d)| async move {
+            let session_id = {
+                let idx = state.index.read().await;
+                idx.get(&s.id.to_string()).map(|x| x.session_id.clone())
+            };
+            let Some(session_id) = session_id else { return };
+
+            let socket_ids = {
+                let rooms = state.rooms.read().await;
+                rooms.get(&session_id)
+                    .map(|r| collect_socket_ids(&r.players))
+                    .unwrap_or_default()
+            };
+
+            emit_to_sockets_excluding_self(&s, &socket_ids, "data-message", &d).await;
+        },
+    );
+
+    socket.on(
+        "snapshot",
+        |s: SocketRef, SocketState::<AppState>(state), Data::<Value>(d)| async move {
+            let session_id = {
+                let idx = state.index.read().await;
+                idx.get(&s.id.to_string()).map(|x| x.session_id.clone())
+            };
+            let Some(session_id) = session_id else { return };
+
+            let socket_ids = {
+                let rooms = state.rooms.read().await;
+                rooms.get(&session_id)
+                    .map(|r| collect_socket_ids(&r.players))
+                    .unwrap_or_default()
+            };
+
+            emit_to_sockets_excluding_self(&s, &socket_ids, "snapshot", &d).await;
+        },
+    );
+
+    socket.on(
+        "input",
+        |s: SocketRef, SocketState::<AppState>(state), Data::<Value>(d)| async move {
+            let session_id = {
+                let idx = state.index.read().await;
+                idx.get(&s.id.to_string()).map(|x| x.session_id.clone())
+            };
+            let Some(session_id) = session_id else { return };
+
+            let socket_ids = {
+                let rooms = state.rooms.read().await;
+                rooms.get(&session_id)
+                    .map(|r| collect_socket_ids(&r.players))
+                    .unwrap_or_default()
+            };
+
+            emit_to_sockets_excluding_self(&s, &socket_ids, "input", &d).await;
+        },
+    );
+}
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt::init();
+    let state = AppState {
+        rooms: Arc::new(RwLock::new(HashMap::new())),
+        index: Arc::new(RwLock::new(HashMap::new())),
+        games: Arc::new(RwLock::new(HashMap::new())),
+    };
 
-    let state: AppState = Arc::new(RwLock::new(HashMap::new()));
-    let state_for_cleanup = state.clone();
-
+    let cleanup = state.clone();
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_secs(60));
         loop {
             interval.tick().await;
-            let mut rooms_lock = state_for_cleanup.write().await;
-            rooms_lock.retain(|_, room| !room.players.is_empty());
+            let mut rooms = cleanup.rooms.write().await;
+            rooms.retain(|_, r| !r.players.is_empty());
         }
     });
 
-    // Setup Socket.io Server
-    let (layer, io) = SocketIo::builder()
-        .with_state(state.clone())
-        .build_layer();
-
+    let (layer, io) = SocketIo::builder().with_state(state.clone()).build_layer();
     io.ns("/", on_connect);
 
-    let cors = CorsLayer::permissive();
+    let cors = CorsLayer::new()
+        .allow_methods(Any)
+        .allow_headers(Any)
+        .allow_origin(Any);
 
     let app = Router::new()
         .route("/list", get(list_rooms))
+        .route("/games", get(games))
         .with_state(state)
         .layer(layer)
         .layer(cors);
 
-    let port: u16 = std::env::var("PORT").unwrap_or_else(|_| "3000".into()).parse().unwrap();
+    let port: u16 = std::env::var("PORT")
+        .unwrap_or_else(|_| "3021".into())
+        .parse()
+        .unwrap();
+
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
-    
-    info!("Server running on {}", addr);
-    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
+
+    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }
