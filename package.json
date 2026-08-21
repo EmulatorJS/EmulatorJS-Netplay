@@ -1,0 +1,17 @@
+{
+  "name": "emulatorjs-netplay",
+  "version": "1.0.0",
+  "description": "Netplay signaling server for EmulatorJS",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
